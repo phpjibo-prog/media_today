@@ -16,7 +16,7 @@ class FingerprintEngine:
                 "user": db_user,
                 "password": db_password,
                 "database": db_name,
-                "port": db_port  # 2. ADD THE PORT KEY HERE
+                "port": int(db_port)  # 2. ADD THE PORT KEY HERE
             }
         }
 
