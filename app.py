@@ -66,7 +66,7 @@ STREAMS = [
     "hhttps://cast.tunzilla.com/http://usa1-vn.mixstream.net:8090/;listen.mp3",
 ]
 
-recorder = MultiStreamRecorder(DB_CONFIG)
+
 
 def allowed_image(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGES
@@ -205,6 +205,12 @@ def home():
         logged_in=logged_in, 
         all_radios=all_radios # <-- NEW CONTEXT VARIABLE
     )
+
+@app.route("/start-recorder")
+def start_recorder():
+    recorder = MultiStreamRecorder(DB_CONFIG)
+    recorder.start()
+    return "Recorder started"
 
 @app.route('/about')
 def about():
