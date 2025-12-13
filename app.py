@@ -15,7 +15,8 @@ fingerprint = FingerprintEngine(
     db_host=os.environ.get('MYSQL_HOST'),
     db_user=os.environ.get('MYSQL_USER'),
     db_password=os.environ.get('MYSQL_PASSWORD'),
-    db_name=os.environ.get('MYSQL_DATABASE')
+    db_name=os.environ.get('MYSQL_DATABASE'),
+    db_port = os.environ.get('MYSQL_PORT', 3306)
 )
 
 # fingerprint = FingerprintEngine(
