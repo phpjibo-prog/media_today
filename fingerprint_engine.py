@@ -6,7 +6,7 @@ from dejavu.logic.recognizer.file_recognizer import FileRecognizer
 
 
 class FingerprintEngine:
-    def __init__(self, db_host="127.0.0.1", db_user="root", db_password="", db_name="media_daily_eye_db"):
+    def __init__(self, db_host="127.0.0.1", db_user="root", db_password="", db_name="media_daily_eye_db", db_port=3306):
         """
         Initialize Dejavu with DB config
         """
@@ -16,6 +16,7 @@ class FingerprintEngine:
                 "user": db_user,
                 "password": db_password,
                 "database": db_name,
+                "port": db_port  # <-- ADDED PORT HERE
             }
         }
 
