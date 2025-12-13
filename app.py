@@ -14,11 +14,11 @@ from radio_manager import RadioManager
 fingerprint = FingerprintEngine(
     # Change the default from None (which is the default of os.environ.get) 
     # to an empty string. The actual host is a long string.
-    db_host=os.environ.get('MYSQL_HOST', ''), 
-    db_user=os.environ.get('MYSQL_USER', ''),
-    db_password=os.environ.get('MYSQL_PASSWORD', ''),
-    db_name=os.environ.get('MYSQL_DATABASE', ''),
-    db_port=os.environ.get('MYSQL_PORT', 3306)
+    db_host=os.environ.get('MYSQLHOST', ''), 
+    db_user=os.environ.get('MYSQLUSER', ''),
+    db_password=os.environ.get('MYSQLPASSWORD', ''),
+    db_name=os.environ.get('MYSQLDATABASE', ''),
+    db_port=os.environ.get('MYSQLPORT', 3306)
 )
 
 # fingerprint = FingerprintEngine(
@@ -45,11 +45,11 @@ app.config["IMAGE_FOLDER"] = IMAGE_FOLDER
 
 # Database Configuration (Update with your credentials)
 DB_CONFIG = {
-    'host': os.environ.get('MYSQL_HOST'),
-    'user': os.environ.get('MYSQL_USER'),
-    'password': os.environ.get('MYSQL_PASSWORD'),
-    'database': os.environ.get('MYSQL_DATABASE'), 
-    'port': os.environ.get('MYSQL_PORT', 3306)
+    'host': os.environ.get('MYSQLHOST'),
+    'user': os.environ.get('MYSQLUSER'),
+    'password': os.environ.get('MYSQLPASSWORD'),
+    'database': os.environ.get('MYSQLDATABASE'), 
+    'port': os.environ.get('MYSQLPORT', 3306)
 }
 
 # DB_CONFIG = {
