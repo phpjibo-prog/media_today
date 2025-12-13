@@ -1,0 +1,6 @@
+[phases.setup]
+apt-packages = [
+  "portaudio19-dev",
+  "libasound-dev",
+  "build-essential" # Often needed for C compilation
+]
