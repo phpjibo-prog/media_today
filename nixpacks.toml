@@ -1,12 +1,6 @@
 [phases.setup]
 apt-packages = [
-  # Required for PyAudio
   "portaudio19-dev",
   "libasound-dev",
-
-  # General compilation tools
-  "build-essential"
-
-  # Since you have psycopg2, you may also need these:
-  "libpq-dev" 
+  "ffmpeg"  # Since this was detected as needed
 ]
