@@ -1,6 +1,7 @@
 Flask
 gunicorn
 pydub
+PyAudio
 numpy
 scipy
 matplotlib
