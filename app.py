@@ -45,10 +45,10 @@ app.config["IMAGE_FOLDER"] = IMAGE_FOLDER
 
 # Database Configuration (Update with your credentials)
 DB_CONFIG = {
-    'host': os.environ.get('MYSQLHOST'),
-    'user': os.environ.get('MYSQLUSER'),
-    'password': os.environ.get('MYSQLPASSWORD'),
-    'database': os.environ.get('MYSQLDATABASE'), 
+    'host': os.environ.get('MYSQLHOST', ''),
+    'user': os.environ.get('MYSQLUSER', ''),
+    'password': os.environ.get('MYSQLPASSWORD', ''),
+    'database': os.environ.get('MYSQLDATABASE', ''), 
     'port': os.environ.get('MYSQLPORT', 3306)
 }
 
