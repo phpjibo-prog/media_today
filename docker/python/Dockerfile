@@ -29,4 +29,4 @@ COPY . .
 # 6. Define the Start Command (Crucial for successful runtime)
 # Replace 'app:app' with the correct MODULE:OBJECT for your application 
 # (e.g., multi_stream_recorder:app if your app object is named 'app' inside multi_stream_recorder.py)
-CMD "gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"
+CMD gunicorn --bind 0.0.0.0:$PORT app:app
