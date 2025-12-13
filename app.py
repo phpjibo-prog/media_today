@@ -12,10 +12,10 @@ from radio_manager import RadioManager
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
-    db_host=os.environ.get('MYSQLHOST'),
-    db_user=os.environ.get('MYSQLUSER'),
-    db_password=os.environ.get('MYSQLPASSWORD'),
-    db_name=os.environ.get('MYSQLDATABASE')
+    db_host=os.environ.get('MYSQL_HOST'),
+    db_user=os.environ.get('MYSQL_USER'),
+    db_password=os.environ.get('MYSQL_PASSWORD'),
+    db_name=os.environ.get('MYSQL_DATABASE')
 )
 
 # fingerprint = FingerprintEngine(
@@ -42,11 +42,10 @@ app.config["IMAGE_FOLDER"] = IMAGE_FOLDER
 
 # Database Configuration (Update with your credentials)
 DB_CONFIG = {
-    'host': os.environ.get('MYSQLHOST'),
-    'user': os.environ.get('MYSQLUSER'),
-    'password': os.environ.get('MYSQLPASSWORD'),
-    # Use the name you want, or the one provided by Railway if you didn't change it
-    'database': os.environ.get('MYSQLDATABASE') 
+    'host': os.environ.get('MYSQL_HOST'),
+    'user': os.environ.get('MYSQL_USER'),
+    'password': os.environ.get('MYSQL_PASSWORD'),
+    'database': os.environ.get('MYSQL_DATABASE') 
 }
 
 # DB_CONFIG = {
