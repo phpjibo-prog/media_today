@@ -18,7 +18,7 @@ class FingerprintMatcher:
             }
         }
 
-        self.djv = Dejavu(config)
+        self.djv = None
 
     def recognize_clip(self, audio_path, stream_link):
         print(f"[Matcher] 🔍 Checking fingerprint for: {audio_path}")
