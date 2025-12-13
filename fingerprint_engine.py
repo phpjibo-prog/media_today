@@ -20,7 +20,7 @@ class FingerprintEngine:
             }
         }
 
-        self.djv = Dejavu(self.config)
+        self.djv = None
 
     def fingerprint_folder(self, folder_path, extensions=[".mp3"], workers=3):
         """
