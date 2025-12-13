@@ -12,11 +12,13 @@ from radio_manager import RadioManager
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
-    db_host=os.environ.get('MYSQL_HOST'),
-    db_user=os.environ.get('MYSQL_USER'),
-    db_password=os.environ.get('MYSQL_PASSWORD'),
-    db_name=os.environ.get('MYSQL_DATABASE'),
-    db_port = os.environ.get('MYSQL_PORT', 3306)
+    # Change the default from None (which is the default of os.environ.get) 
+    # to an empty string. The actual host is a long string.
+    db_host=os.environ.get('MYSQL_HOST', ''), 
+    db_user=os.environ.get('MYSQL_USER', ''),
+    db_password=os.environ.get('MYSQL_PASSWORD', ''),
+    db_name=os.environ.get('MYSQL_DATABASE', ''),
+    db_port=os.environ.get('MYSQL_PORT', 3306)
 )
 
 # fingerprint = FingerprintEngine(
