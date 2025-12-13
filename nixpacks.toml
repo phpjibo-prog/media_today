@@ -1,6 +1,13 @@
+Ini, TOML
 [phases.setup]
 apt-packages = [
+  # Required for PyAudio
   "portaudio19-dev",
   "libasound-dev",
-  "build-essential" # Often needed for C compilation
+
+  # General compilation tools
+  "build-essential"
+
+  # Since you have psycopg2, you may also need these:
+  "libpq-dev" 
 ]
