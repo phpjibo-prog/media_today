@@ -49,7 +49,8 @@ DB_CONFIG = {
     'user': os.environ.get('MYSQLUSER', ''),
     'password': os.environ.get('MYSQLPASSWORD', ''),
     'database': os.environ.get('MYSQLDATABASE', ''), 
-    'port': os.environ.get('MYSQLPORT', 3306)
+    'port': os.environ.get('MYSQLPORT', 3306),
+    'ssl_disabled': True
 }
 
 # DB_CONFIG = {
