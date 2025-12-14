@@ -37,6 +37,12 @@ ALLOWED_IMAGES = {"png", "jpg", "jpeg"}
 
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
+print("=== MYSQL ENV DEBUG ===")
+print("HOST:", os.environ.get("MYSQLHOST"))
+print("USER:", os.environ.get("MYSQLUSER"))
+print("DB:", os.environ.get("MYSQLDATABASE"))
+print("PORT:", os.environ.get("MYSQLPORT"))
+print("=======================")
 
 app = Flask(__name__)
 app.secret_key = 'jibostable' # !! REQUIRED !!
@@ -49,8 +55,7 @@ DB_CONFIG = {
     'user': os.environ.get('MYSQLUSER', ''),
     'password': os.environ.get('MYSQLPASSWORD', ''),
     'database': os.environ.get('MYSQLDATABASE', ''), 
-    'port': os.environ.get('MYSQLPORT', 3306),
-    'ssl_disabled': True
+    'port': os.environ.get('MYSQLPORT', 3306)
 }
 
 # DB_CONFIG = {
@@ -206,6 +211,19 @@ def home():
         logged_in=logged_in, 
         all_radios=all_radios # <-- NEW CONTEXT VARIABLE
     )
+
+@app.route("/db-test")
+def db_test():
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("SHOW TABLES")
+        tables = cur.fetchall()
+        cur.close()
+        conn.close()
+        return f"CONNECTED ✅ Tables: {tables}"
+    except Exception as e:
+        return f"DB FAILED ❌ {e}"
 
 @app.route("/start-recorder")
 def start_recorder():
