@@ -1,14 +1,15 @@
 # app.py content (FIXED AND DEBUGGED)
-from flask import Flask, render_template, session, redirect, url_for, request, flash
+from flask import Flask, render_template, session, redirect, url_for, request, flash, jsonify
 import os 
 import mysql.connector
 from mysql.connector import Error
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from multi_stream_recorder import MultiStreamRecorder
 from fingerprint_engine import FingerprintEngine
 from radio_manager import RadioManager
+from user_tracker import UserTracker
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -25,7 +26,8 @@ fingerprint = FingerprintEngine(
 #     db_host="127.0.0.1",
 #     db_user="root",
 #     db_password="",
-#     db_name="media_daily_eye_db"
+#     db_name="media_daily_eye_db",
+#     db_port= 3306
 # )
 
 UPLOAD_FOLDER = 'uploads'
@@ -62,17 +64,19 @@ DB_CONFIG = {
 #     'host': 'localhost',
 #     'user': 'root',
 #     'password': '',
-#     'database': 'media_daily_eye_db'
+#     'database': 'media_daily_eye_db',
+#     'port': 3306
 # }
 
 radio_manager = RadioManager(DB_CONFIG)
+user_tracker = UserTracker(DB_CONFIG)
 STREAMS = [
     "https://eatv.radioca.st/stream",
     "https://s3.radio.co/s8df0149e0/listen",
     "hhttps://cast.tunzilla.com/http://usa1-vn.mixstream.net:8090/;listen.mp3",
 ]
 
-
+recorder = MultiStreamRecorder(DB_CONFIG)
 
 def allowed_image(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGES
@@ -177,6 +181,48 @@ def get_user_activity(user_id):
 
     return data
 
+def calculate_date_range(date_type, date_value):
+    """
+    Calculates precise start_date and end_date datetime objects 
+    from the user's input type (date, week, month) and value.
+    """
+    start_date = None
+    end_date = None
+    
+    try:
+        if date_type == 'date' and date_value:
+            # Format: 'YYYY-MM-DD'
+            start_date = datetime.strptime(date_value, '%Y-%m-%d')
+            end_date = start_date + timedelta(days=1) - timedelta(seconds=1) # End of the selected day
+
+        elif date_type == 'week' and date_value:
+            # Format: 'YYYY-Wnn' (e.g., '2025-W51')
+            year, week_num = map(int, date_value.split('-W'))
+            # Monday of the given week
+            start_date = datetime.strptime(f'{year}-W{week_num}-1', '%Y-W%W-%w')
+            end_date = start_date + timedelta(weeks=1) - timedelta(seconds=1) # End of the week (Sunday 23:59:59)
+
+        elif date_type == 'month' and date_value:
+            # Format: 'YYYY-MM'
+            start_date = datetime.strptime(date_value, '%Y-%m')
+            
+            # Calculate the first day of the *next* month
+            year = start_date.year
+            month = start_date.month
+            
+            if month == 12:
+                next_month_start = datetime(year + 1, 1, 1)
+            else:
+                next_month_start = datetime(year, month + 1, 1)
+                
+            end_date = next_month_start - timedelta(seconds=1) # End of the selected month
+        
+    except ValueError as e:
+        print(f"Error calculating date range for {date_type}: {e}")
+        # Return None, which will trigger the 7-day default in RadioManager
+        return None, None
+        
+    return start_date, end_date
 
 # Add this function to track online status (runs before every request)
 @app.before_request
@@ -198,18 +244,72 @@ def update_last_seen():
                     if cursor: cursor.close()
                     if conn: conn.close()
             
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
     logged_in = session.get('logged_in', False)
+    user_data = session.get('user_data', {}) # Get user data for the ID
+    user_id = user_data.get('db_id')
     # 1. Fetch radio data
-    all_radios = radio_manager.get_all_radios()
+    # Initialize date range variables
+    start_date = None
+    end_date = None
+    
+    # 1. Handle form submission (filtering)
+    if request.method == 'POST':
+        # Determine which input type was used
+        date_type = request.form.get('date_type') # 'date', 'week', or 'month'
+        date_value = request.form.get('date_value') # The actual value from the input
+        
+        # Calculate the date range based on the input
+        start_date, end_date = calculate_date_range(date_type, date_value)
+        
+        # Store the current selection in session to preserve it across page reloads
+        session['filter_date_type'] = date_type
+        session['filter_date_value'] = date_value
+        
+    else: # GET request (first load or direct navigation)
+        # Check session for a previous filter selection
+        date_type = session.get('filter_date_type')
+        date_value = session.get('filter_date_value')
+        
+        if date_type and date_value:
+            start_date, end_date = calculate_date_range(date_type, date_value)
+
+    # 2. Fetch radio data, passing the calculated dates (or None/None for default)
+    # The RadioManager handles the 7-day default if start_date/end_date are None
+    all_radios = radio_manager.get_all_radios(start_date=start_date, end_date=end_date)
+    
+    # 2. Fetch total song count (NEW)
+    total_songs = radio_manager.get_total_songs_count()
+
+    user_tracks_data = []
+    if logged_in and user_id:
+        # Pass the calculated or default date range to the tracker
+        user_tracks_data = user_tracker.get_user_tracked_plays(
+            user_id=user_id, 
+            start_date=start_date, 
+            end_date=end_date
+        )
+
+    most_played_data = user_tracker.get_most_played_tracks(
+        # Pass user_id only if logged in, otherwise None for general data
+        user_id=user_id if logged_in else None,
+        start_date=start_date, 
+        end_date=end_date
+    )
     
     # 2. Pass data to the template
     return render_template(
         'index.html', 
         title='Homepage', 
         logged_in=logged_in, 
-        all_radios=all_radios # <-- NEW CONTEXT VARIABLE
+        all_radios=all_radios,
+        # NEW CONTEXT VARIABLES for template to remember the selected filter
+        user_tracks_data=user_tracks_data,
+        most_played_data=most_played_data,
+        current_date_type=session.get('filter_date_type', 'date'), # Default to 'date'
+        current_date_value=session.get('filter_date_value', ''),
+        total_songs=total_songs
     )
 
 @app.route("/db-test")
@@ -546,6 +646,7 @@ def account():
     # Attempt to load data but never break the route
     try:
         activity_data = get_user_activity(user_id)
+        all_available_songs = user_tracker.get_all_songs_with_status(user_id)
         print("DEBUG: Following songs returned =", activity_data['following'])
     except Exception as e:
         print("CRITICAL ERROR in account():", e)
@@ -558,11 +659,39 @@ def account():
         logged_in=logged_in,
         uploaded_ids=activity_data.get('uploaded', []),
         following_songs=activity_data.get('following', []),
-        online_users=activity_data.get('online_users', [])
+        online_users=activity_data.get('online_users', []),
+        all_available_songs=all_available_songs
     )
 
+@app.route('/api/toggle_follow', methods=['POST'])
+def api_toggle_follow():
+    """API endpoint for the Add/Remove buttons on the account page."""
+    logged_in = session.get('logged_in', False)
+    user_data = session.get('user_data')
+    
+    if not logged_in or not user_data or not user_data.get('db_id'):
+        return jsonify({"success": False, "message": "Authentication required."}), 401
+    
+    user_id = user_data.get('db_id')
+    
+    data = request.get_json()
+    try:
+        song_id = int(data.get('song_id'))
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "Invalid song ID."}), 400
+        
+    action = data.get('action') # 'add' or 'remove'
+    
+    if action not in ['add', 'remove']:
+        return jsonify({"success": False, "message": "Invalid action."}), 400
+
+    # Call the user_tracker function
+    success, message = user_tracker.toggle_follow_status(user_id, song_id, action)
+    
+    return jsonify({"success": success, "message": message})
 
 if __name__ == '__main__':
-    #recorder.start()          # Start background radio recording
+    recorder.start()          # Start background radio recording
+    #start_recorder()
     print(">>> Recorder Started <<<")
     app.run(debug=True)
