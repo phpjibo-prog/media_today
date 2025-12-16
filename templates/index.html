@@ -18,8 +18,9 @@
         /* Light background for visibility */
         border: 1px solid #ddd;
         /* Subtle border */
-        border-radius: 5px;
+        border-radius: 8px;
         /* Rounded corners */
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     .radio-dashboard h2 {
@@ -233,51 +234,210 @@
     .picker-input.active {
         display: block;
     }
+
+    .filter-button {
+        background-color: #3b5998;
+        /* Facebook Blue */
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.2s;
+        margin-left: 10px;
+        /* Space from the date picker */
+    }
+
+    .filter-button:hover {
+        background-color: #2e477a;
+    }
+
+    .mp3-dashboard {
+        margin-top: 20px;
+        background-color: #fff;
+        border: 1px solid #dddfe2;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        padding: 15px;
+    }
+
+    .mp3-tabs-container {
+        display: flex;
+        border-bottom: 1px solid #f0f2f5;
+        /* Light grey separator */
+        margin-bottom: 15px;
+    }
+
+    .mp3-tab {
+        flex-grow: 1;
+        padding: 10px 15px;
+        border: none;
+        background-color: transparent;
+        cursor: pointer;
+        font-size: 1.0em;
+        font-weight: 600;
+        color: #606770;
+        /* Muted text */
+        border-bottom: 3px solid transparent;
+        /* Placeholder for active state */
+        transition: color 0.2s, border-bottom-color 0.2s;
+    }
+
+    .mp3-tab:hover:not(.active) {
+        background-color: #f0f2f5;
+        border-radius: 4px 4px 0 0;
+    }
+
+    .mp3-tab.active {
+        color: #3b5998;
+        /* Facebook Blue */
+        border-bottom-color: #3b5998;
+    }
+
+    .mp3-content-wrapper {
+        min-height: 100px;
+    }
+
+    .mp3-content-panel {
+        padding: 10px 0;
+    }
+
+    .mp3-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .mp3-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f2f5;
+        color: #050505;
+    }
+
+    .mp3-item:last-child {
+        border-bottom: none;
+    }
+
+    .login-links-container {
+        text-align: center;
+        padding: 30px;
+        background-color: #f0f2f5;
+        border-radius: 6px;
+        border: 1px solid #dddfe2;
+    }
+
+    .login-links-container h3 {
+        margin-top: 0;
+        color: #3b5998;
+    }
+
+    .login-toggle-btn {
+        background-color: #3b5998;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 700;
+        margin-bottom: 15px;
+        width: 100%;
+    }
+
+    .login-toggle-btn:hover {
+        background-color: #2e477a;
+    }
+
+    .login-link {
+        display: block;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background-color 0.2s;
+    }
+
+    .login-link.google {
+        background-color: #db4437;
+        /* Google Red */
+        color: white;
+    }
+
+    .login-link.google:hover {
+        background-color: #c33d32;
+    }
+
+    .login-link.facebook {
+        background-color: #1877f2;
+        /* Facebook Blue */
+        color: white;
+    }
+
+    .login-link.facebook:hover {
+        background-color: #1562c2;
+    }
+
+    .mp3-item-detail {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9em;
+        color: #606770;
+        margin-top: 5px;
+    }
+
+    /* Small icon styling */
+    .radio-icon-small {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        border-radius: 50%;
+        margin-right: 5px;
+        border: 1px solid #dddfe2;
+    }
 </style>
 
-<div class="radio-dashboard">
-    <h2>📻 Radios</h2>
+<form method="POST" action="{{ url_for('home') }}" id="radio-filter-form">
+    <div class="radio-dashboard">
+        <h2>📻 Radios</h2>
 
-    <div class="radio-stats">
-        <p>Number of stations: **{{ all_radios|length }}**</p>
+        <div class="radio-stats">
+            <p>Number of stations: **{{ all_radios|length }}**</p>
+            <p>Total Songs: **{{ total_songs }}**</p>
 
-        <div class="date-picker-container">
-            <div class="view-selector">
-                <button id="view-date" class="active">Date</button>
-                <button id="view-week">Week</button>
-                <button id="view-month">Month</button>
+            <div class="date-picker-container">
+                <div class="view-selector">
+                    <button type="button" id="view-date" data-type="date">Date</button>
+                    <button type="button" id="view-week" data-type="week">Week</button>
+                    <button type="button" id="view-month" data-type="month">Month</button>
+                </div>
+
+                <div class="input-views" style="position: relative;">
+                    <input type="hidden" name="date_type" id="date-type-hidden" value="{{ current_date_type }}">
+                    <input type="hidden" name="date_value" id="date-value-hidden" value="{{ current_date_value }}">
+
+                    <input type="date" id="calendar-select-date" data-type="date"
+                        class="picker-input {% if current_date_type != 'date' %}hidden{% endif %}"
+                        value="{% if current_date_type == 'date' %}{{ current_date_value }}{% endif %}"
+                        onchange="updateHiddenFields(this)">
+
+                    <input type="week" id="calendar-select-week" data-type="week"
+                        class="picker-input {% if current_date_type != 'week' %}hidden{% endif %}"
+                        value="{% if current_date_type == 'week' %}{{ current_date_value }}{% endif %}"
+                        onchange="updateHiddenFields(this)">
+
+                    <input type="month" id="calendar-select-month" data-type="month"
+                        class="picker-input {% if current_date_type != 'month' %}hidden{% endif %}"
+                        value="{% if current_date_type == 'month' %}{{ current_date_value }}{% endif %}"
+                        onchange="updateHiddenFields(this)">
+                </div>
             </div>
 
-            <div class="input-views">
-                <input type="date" id="calendar-select-date" name="calendar-select" class="picker-input active">
-
-                <input type="week" id="calendar-select-week" name="calendar-select-week" class="picker-input hidden">
-
-                <input type="month" id="calendar-select-month" name="calendar-select-month" class="picker-input hidden">
-            </div>
+            <button type="submit" class="filter-button">Apply Filter</button>
         </div>
-
-        <script>
-            // This simple JavaScript is essential to toggle visibility.
-            document.querySelectorAll('.view-selector button').forEach(button => {
-                button.addEventListener('click', function () {
-                    // 1. Update button active state
-                    document.querySelector('.view-selector .active').classList.remove('active');
-                    this.classList.add('active');
-
-                    // 2. Determine which input to show
-                    const targetId = this.id.replace('view-', 'calendar-select-');
-
-                    // 3. Hide all inputs and show the target one
-                    document.querySelectorAll('.picker-input').forEach(input => {
-                        input.classList.add('hidden');
-                    });
-                    document.getElementById(targetId).classList.remove('hidden');
-                });
-            });
-        </script>
     </div>
-</div>
+</form>
 
 <div class="radio-cards-container">
     <audio id="radio-player" controls style="display:none;"></audio>
@@ -291,6 +451,8 @@
 
         <p>Region: **{{ radio.region_name }}**</p>
 
+        <p>Played Songs: **{{ radio.played_count }}**</p>
+
         <button class="play-radio-btn" data-stream-url="{{ radio.stream_link }}"
             data-radio-name="{{ radio.radio_name }}">
             ▶ Play Stream
@@ -301,56 +463,233 @@
     {% endfor %}
 </div>
 
+<div class="mp3-dashboard">
+    <div class="mp3-tabs-container">
+        <button class="mp3-tab active" data-target="most-played-mp3">Most Played Mp3</button>
+        <button class="mp3-tab" data-target="my-list">My List</button>
+    </div>
+
+    <div class="mp3-content-wrapper">
+        <div id="most-played-mp3" class="mp3-content-panel">
+            <h3>
+                {% if logged_in %}
+                Your Most Played Tracks
+                {% else %}
+                Most Played Tracks (All Users)
+                {% endif %}
+                (Last 7 Days/Selected Period)
+            </h3>
+
+            {% if most_played_data %}
+            <ul class="mp3-list">
+                {% for song in most_played_data %}
+                <li class="mp3-item">
+                    {{ loop.index }}.
+                    <strong>{{ song.track_name }}</strong>
+                    <span style="font-size: 0.9em; color: #606770;">(Total: {{ song.total_count }} plays)</span>
+
+                    <div class="mp3-item-detail">
+                        {% for radio in song.radios %}
+                        <div style="display: flex; align-items: center; margin-right: 15px;">
+                            <img src="{{ url_for('static', filename=radio.icon_path) }}" alt="{{ radio.radio_name }}"
+                                class="radio-icon-small" style="width: 20px; height: 20px;">
+                            <span>{{ radio.radio_name }} ({{ radio.count }})</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No songs matching your criteria have been played in the selected period.</p>
+            {% endif %}
+        </div>
+
+        <div id="my-list" class="mp3-content-panel hidden">
+            {% if logged_in %}
+            <h3>Your Tracked Songs (Last 7 Days/Selected Period)</h3>
+
+            {% if user_tracks_data %}
+            <ul class="mp3-list">
+                {% for song in user_tracks_data %}
+                <li class="mp3-item">
+                    <strong>{{ song.track_name }}</strong>
+                    <div class="mp3-item-detail">
+                        {% for radio in song.radios %}
+                        <div style="display: flex; align-items: center;">
+                            <img src="{{ url_for('static', filename=radio.icon_path) }}" alt="{{ radio.radio_name }}"
+                                class="radio-icon-small">
+                            <span>{{ radio.radio_name }} ({{ radio.count }} plays)</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>You are not currently tracking any songs, or your tracked songs have not played in the selected period.
+            </p>
+            {% endif %}
+
+            {% else %}
+            <div class="login-links-container">
+                <button class="login-toggle-btn" id="add-mp3-toggle">
+                    Add mp3 (Log In to Track)
+                </button>
+                <div id="login-links" class="hidden">
+                    <a href="{{ url_for('login_simulation', provider='google') }}" class="login-link google">Log in with
+                        Google</a>
+                    <a href="{{ url_for('login_simulation', provider='facebook') }}" class="login-link facebook">Log in
+                        with Facebook</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 <script>
-    const audioPlayer = document.getElementById('radio-player');
-    let currentButton = null;
+    // Helper function to update hidden form fields when an input value changes
+    function updateHiddenFields(inputElement) {
+        document.getElementById('date-type-hidden').value = inputElement.getAttribute('data-type');
+        document.getElementById('date-value-hidden').value = inputElement.value;
+    }
 
-    document.querySelectorAll('.play-radio-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const streamUrl = this.getAttribute('data-stream-url');
-            const radioName = this.getAttribute('data-radio-name');
+    // This simple JavaScript is essential to toggle visibility and manage the active state.
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Initialize active button based on current_date_type
+        const initialType = '{{ current_date_type }}';
 
-            // 1. Check if the current radio is already playing
-            if (audioPlayer.src === streamUrl && !audioPlayer.paused) {
-                // Pause the stream
-                audioPlayer.pause();
-                this.textContent = '▶ Play Stream';
-                currentButton = null;
-            } else {
-                // 2. Stop any currently playing stream and reset its button text
-                if (currentButton) {
-                    currentButton.textContent = '▶ Play Stream';
+        // Remove active class from all buttons
+        document.querySelectorAll('.view-selector button').forEach(btn => btn.classList.remove('active'));
+
+        // Set active class on the corresponding button
+        const initialButton = document.querySelector(`.view-selector button[data-type="${initialType}"]`);
+        if (initialButton) {
+            initialButton.classList.add('active');
+        }
+
+        // 2. Set event listeners for view selector buttons
+        document.querySelectorAll('.view-selector button').forEach(button => {
+            button.addEventListener('click', function () {
+                // Update button active state
+                document.querySelector('.view-selector .active').classList.remove('active');
+                this.classList.add('active');
+
+                const newType = this.getAttribute('data-type');
+                const targetId = `calendar-select-${newType}`;
+                const targetInput = document.getElementById(targetId);
+
+                // Update hidden type field immediately
+                document.getElementById('date-type-hidden').value = newType;
+
+                // Hide all inputs and show the target one
+                document.querySelectorAll('.picker-input').forEach(input => {
+                    input.classList.add('hidden');
+                });
+
+                targetInput.classList.remove('hidden');
+
+                // Also update the value in the hidden field to the current value of the newly visible input
+                document.getElementById('date-value-hidden').value = targetInput.value;
+            });
+        });
+
+        // 3. Audio Player Logic (Keep this)
+        const audioPlayer = document.getElementById('radio-player');
+        let currentButton = null;
+
+        document.querySelectorAll('.play-radio-btn').forEach(button => {
+            // ... existing audio playback logic remains the same ...
+            button.addEventListener('click', function () {
+                const streamUrl = this.getAttribute('data-stream-url');
+                const radioName = this.getAttribute('data-radio-name');
+
+                // 1. Check if the current radio is already playing
+                if (audioPlayer.src === streamUrl && !audioPlayer.paused) {
+                    // Pause the stream
+                    audioPlayer.pause();
+                    this.textContent = '▶ Play Stream';
+                    currentButton = null;
+                } else {
+                    // 2. Stop any currently playing stream and reset its button text
+                    if (currentButton) {
+                        currentButton.textContent = '▶ Play Stream';
+                    }
+
+                    // 3. Start playing the new radio stream
+                    audioPlayer.src = streamUrl;
+                    audioPlayer.play()
+                        .then(() => {
+                            this.textContent = '⏸ Pause Stream';
+                            currentButton = this;
+                            // You can display a message to the user here (e.g., in a status bar)
+                            console.log(`Now playing: ${radioName}`);
+                        })
+                        .catch(e => {
+                            console.error(`Error playing stream for ${radioName}:`, e);
+                            alert(`Could not play stream for ${radioName}. Check the stream link.`);
+                            this.textContent = '▶ Play Stream';
+                        });
                 }
+            });
+        });
 
-                // 3. Start playing the new radio stream
-                audioPlayer.src = streamUrl;
-                audioPlayer.play()
-                    .then(() => {
-                        this.textContent = '⏸ Pause Stream';
-                        currentButton = this;
-                        // You can display a message to the user here (e.g., in a status bar)
-                        console.log(`Now playing: ${radioName}`);
-                    })
-                    .catch(e => {
-                        console.error(`Error playing stream for ${radioName}:`, e);
-                        alert(`Could not play stream for ${radioName}. Check the stream link.`);
-                        this.textContent = '▶ Play Stream';
-                    });
+        // Handle button text when playback is externally stopped/errors
+        audioPlayer.addEventListener('pause', () => {
+            if (currentButton) {
+                currentButton.textContent = '▶ Play Stream';
+            }
+        });
+
+        audioPlayer.addEventListener('error', (e) => {
+            console.error("Audio playback error:", e);
+            if (currentButton) {
+                currentButton.textContent = '▶ Play Stream';
             }
         });
     });
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.mp3-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                // 1. Deactivate all tabs and hide all content panels
+                document.querySelectorAll('.mp3-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.mp3-content-panel').forEach(p => p.classList.add('hidden'));
 
-    // Handle button text when playback is externally stopped/errors
-    audioPlayer.addEventListener('pause', () => {
-        if (currentButton) {
-            currentButton.textContent = '▶ Play Stream';
-        }
+                // 2. Activate the clicked tab
+                this.classList.add('active');
+
+                // 3. Show the corresponding content panel
+                const targetId = this.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+            });
+        });
     });
 
-    audioPlayer.addEventListener('error', (e) => {
-        console.error("Audio playback error:", e);
-        if (currentButton) {
-            currentButton.textContent = '▶ Play Stream';
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.mp3-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                // 1. Deactivate all tabs and hide all content panels
+                document.querySelectorAll('.mp3-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.mp3-content-panel').forEach(p => p.classList.add('hidden'));
+
+                // 2. Activate the clicked tab
+                this.classList.add('active');
+
+                // 3. Show the corresponding content panel
+                const targetId = this.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+            });
+        });
+
+        // NEW: Login Toggle Logic for "My List"
+        const toggleBtn = document.getElementById('add-mp3-toggle');
+        const loginLinks = document.getElementById('login-links');
+
+        if (toggleBtn && loginLinks) {
+            toggleBtn.addEventListener('click', function () {
+                loginLinks.classList.toggle('hidden');
+            });
         }
     });
 </script>
