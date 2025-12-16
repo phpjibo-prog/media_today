@@ -1,15 +1,231 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    /* ======================================
+    Facebook-like Account Theme (Existing styles)
+    ====================================== */
+    body {
+        background-color: #f0f2f5;
+    }
+
+    .username {
+        background-color: #fff;
+        border: 1px solid #dddfe2;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .username-header {
+        border-bottom: 1px solid #f0f2f5;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .username h1 {
+        margin: 0;
+        font-size: 1.8em;
+        color: #050505;
+    }
+
+    .username-header p {
+        margin: 0;
+        font-size: 1.1em;
+        color: #606770;
+    }
+
+    .username-header strong {
+        color: #3b5998;
+    }
+
+    /* Horizontal Display for User Details */
+    .user-details-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+        padding: 5px 0;
+        font-size: 1em;
+    }
+
+    .detail-item .label {
+        font-weight: 600;
+        color: #606770;
+        margin-right: 5px;
+    }
+
+    .detail-item .value {
+        color: #050505;
+    }
+
+    /* Style the rest of the content (forms, lists) */
+    h2,
+    h3 {
+        color: #3b5998;
+        border-bottom: 1px solid #f0f2f5;
+        padding-bottom: 5px;
+        margin-top: 25px;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px 0;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+        padding: 10px;
+        border: 1px solid #dddfe2;
+        border-radius: 6px;
+        font-size: 1em;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    button[type="submit"] {
+        background-color: #3b5998;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 700;
+        transition: background-color 0.2s;
+    }
+
+    button[type="submit"]:hover {
+        background-color: #2e477a;
+    }
+
+    .user_follows,
+    .following,
+    .online_users,
+    .add-to-my-list {
+        background-color: #fff;
+        border: 1px solid #dddfe2;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* New Section Styles */
+    .mp3-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .mp3-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f2f5;
+    }
+
+    .follow-toggle-btn {
+        padding: 5px 10px;
+        border: 1px solid #3b5998;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    .follow-toggle-btn[data-action="add"] {
+        background-color: #3b5998;
+        color: white;
+    }
+
+    .follow-toggle-btn[data-action="add"]:hover {
+        background-color: #2e477a;
+    }
+
+    .follow-toggle-btn[data-action="remove"] {
+        background-color: #f0f2f5;
+        color: #e44d42;
+        /* Reddish for removal */
+        border-color: #e44d42;
+    }
+
+    .follow-toggle-btn[data-action="remove"]:hover {
+        background-color: #dddfe2;
+    }
+
+    /* End New Section Styles */
+
+    .user_follows ul,
+    .following ul,
+    .online_users ul {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .user_follows li,
+    .following li,
+    .online_users li {
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f2f5;
+    }
+
+    .user_follows li:last-child,
+    .following li:last-child,
+    .online_users li:last-child {
+        border-bottom: none;
+    }
+</style>
+
 <div class="username">
-    <h1>Account Page</h1>
-    <p>Welcome back, {{ user.username }}!</p>
-    <p>Your details:</p>
-    <ul>
-        <li>Username: {{ user.username }}</li>
-        <li>Email: {{ user.email }}</li>
-        <li>Logged in via: {{ user.social_provider }}</li>
+    <div class="username-header">
+        <h1>Account Page</h1>
+        <p>Welcome back, <strong>{{ user.username }}</strong>!</p>
+    </div>
+
+    <div class="user-details-bar">
+        <div class="detail-item">
+            <span class="label">Email:</span>
+            <span class="value">{{ user.email }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="label">Provider:</span>
+            <span class="value">{{ user.social_provider }}</span>
+        </div>
+    </div>
+</div>
+<hr>
+
+<div class="add-to-my-list">
+    <h3>Add To My List</h3>
+
+    {% if all_available_songs %}
+    <ul class="mp3-list">
+        {% for song in all_available_songs %}
+        <li class="mp3-item">
+            <div class="song-info">
+                <strong>{{ song.track_name }}</strong>
+                <small>(ID: {{ song.song_id }})</small>
+            </div>
+            <button class="follow-toggle-btn" data-song-id="{{ song.song_id }}"
+                data-action="{{ 'remove' if song.is_followed else 'add' }}">
+                {{ 'Remove' if song.is_followed else 'Add' }}
+            </button>
+        </li>
+        {% endfor %}
     </ul>
+    {% else %}
+    <p>No songs found in the database.</p>
+    {% endif %}
 </div>
 <hr>
 
@@ -77,4 +293,56 @@
         {% endfor %}
     </ul>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const followButtons = document.querySelectorAll('.follow-toggle-btn');
+
+        followButtons.forEach(button => {
+            button.addEventListener('click', async function () {
+                const songId = this.dataset.songId;
+                let action = this.dataset.action;
+
+                try {
+                    const response = await fetch('/api/toggle_follow', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            song_id: songId,
+                            action: action
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Toggle button state and text
+                        if (action === 'add') {
+                            this.textContent = 'Remove';
+                            this.dataset.action = 'remove';
+                        } else {
+                            this.textContent = 'Add';
+                            this.dataset.action = 'add';
+                        }
+
+                        // Show confirmation message
+                        alert(result.message);
+
+                        // Suggest a simple page reload to update other lists like 'Songs I Follow'
+                        // (In a production app, we would use AJAX to update these lists without a full reload)
+                        window.location.reload();
+
+                    } else {
+                        alert('Error: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Error toggling follow status:', error);
+                    alert('An unexpected error occurred. Check the console.');
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
