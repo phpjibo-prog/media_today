@@ -6,7 +6,7 @@ from dejavu.logic.recognizer.file_recognizer import FileRecognizer
 
 
 class FingerprintEngine:
-    def __init__(self, db_host="127.0.0.1", db_user="root", db_password="", db_name="media_daily_eye_db", db_port=3306):
+    def __init__(self, db_host= os.environ.get('MYSQLHOST', ''), db_user= os.environ.get('MYSQLUSER', ''), db_password= os.environ.get('MYSQLPASSWORD', ''), db_name= os.environ.get('MYSQLDATABASE', ''), db_port= os.environ.get('MYSQLPORT', 3306)):
         """
         Initialize Dejavu with DB config
         """
@@ -20,7 +20,7 @@ class FingerprintEngine:
             }
         }
 
-        self.djv = None
+        self.djv = Dejavu(self.config)
 
     def fingerprint_folder(self, folder_path, extensions=[".mp3"], workers=3):
         """
