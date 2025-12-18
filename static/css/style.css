@@ -547,7 +547,7 @@ footer {
 
     .date-picker-container input[type="date"] {
         flex: 1; /* Makes date inputs take up available space */
-        min-width: 130px;
+        min-width: 90px;
     }
 
     .date-picker-container button {
