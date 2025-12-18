@@ -4,3 +4,16 @@ apt-packages = [
   "libasound-dev",
   "ffmpeg"  # Since this was detected as needed
 ]
+
+[phases.setup]
+# The "..." ensures you don't lose the auto-detected Python/System packages
+aptPkgs = [
+  "...",
+  "portaudio19-dev",
+  "libasound-dev",
+  "ffmpeg"
+]
+
+[phases.install]
+# Ensure your python dependencies are installed
+cmds = ["pip install -r requirements.txt"]
