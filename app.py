@@ -418,7 +418,7 @@ def upload_mp3():
     else:
         flash('Invalid file type. Only MP3 files are allowed.', 'error')
     fingerprint_all()
-    return redirect(url_for('upload_form_page'))
+    return redirect(url_for('home'))
 
 @app.route("/fingerprint_all")
 def fingerprint_all():
@@ -482,7 +482,7 @@ def login_simulation():
         cursor.close()
         conn.close()
 
-    return redirect(url_for('account'))
+    return redirect(url_for('home'))
 
 @app.route('/admin-dashboard')
 @admin_required 
