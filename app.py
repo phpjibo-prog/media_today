@@ -327,7 +327,7 @@ def upload_youtube():
         return redirect(url_for('home'))
 
     # Create a temp directory if it doesn't exist
-    temp_folder = os.path.join(app.root_path, 'temp/')
+    temp_folder = os.path.join(os.getcwd(), 'temp/')
     os.makedirs(temp_folder, exist_ok=True)
 
     file_path = None
@@ -335,7 +335,8 @@ def upload_youtube():
         # 1. Download to the TEMP folder
         print(f"DEBUG: Starting download for {youtube_url}")
         track_name, file_path = download_youtube_as_mp3(youtube_url, temp_folder)
-        print(f"DEBUG: Download complete. Path: {file_path}")
+        abs_file_path = os.path.abspath(file_path)
+        print(f"DEBUG: Download complete. Path: {abs_file_path}")
 
         # 2. Add to Database first (so we have a record)
         conn = get_db_connection()
