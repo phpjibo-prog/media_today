@@ -32,6 +32,7 @@ fingerprint = FingerprintEngine(
 # )
 
 UPLOAD_FOLDER = 'uploads'
+RECORD_FOLDER = 'recordings'
 ALLOWED_EXTENSIONS = {'mp3'}
 
 IMAGE_FOLDER = "static/radio_icons"
@@ -318,7 +319,7 @@ def debug_files():
     if not session.get('user_data', {}).get('is_admin'):
         return "Access Denied", 403
         
-    files = os.listdir(app.config['UPLOAD_FOLDER'])
+    files = os.listdir(app.config['RECORD_FOLDER'])
     return f"<h3>Files in Uploads:</h3><ul>" + "".join([f"<li>{f}</li>" for f in files]) + "</ul>"
 
 @app.route('/upload-youtube', methods=['POST'])
