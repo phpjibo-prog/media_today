@@ -18,7 +18,7 @@ def main():
     print("--- Starting Background Audio Worker ---")
     
     # Initialize the recorder
-    recorder = MultiStreamRecorder(DB_CONFIG)
+    #recorder = MultiStreamRecorder(DB_CONFIG)
     
     # Ensure FingerprintEngine uses the DB_CONFIG properly
     f_engine = FingerprintEngine(
@@ -30,7 +30,7 @@ def main():
     )
 
     # Start the recorder in a separate thread/background
-    recorder.start()
+    #recorder.start()
 
     while True:
         conn = None
