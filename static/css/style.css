@@ -526,13 +526,15 @@ footer {
     }
 
     .radio-dashboard {
-        flex-direction: column; /* Stacks the "Radios Streamed" Title and Stats */
+        flex-direction: column;
+        /* Stacks the "Radios Streamed" Title and Stats */
         align-items: flex-start;
         gap: 15px;
     }
 
     .radio-stats {
-        flex-direction: column; /* Stacks "Number of songs" and Date Picker */
+        flex-direction: column;
+        /* Stacks "Number of songs" and Date Picker */
         align-items: flex-start;
         width: 100%;
         gap: 10px;
@@ -540,18 +542,21 @@ footer {
 
     .date-picker-container {
         display: flex;
-        flex-wrap: wrap; /* Allows the button to wrap if the screen is very narrow */
+        flex-wrap: wrap;
+        /* Allows the button to wrap if the screen is very narrow */
         gap: 10px;
         width: 100%;
     }
 
     .date-picker-container input[type="date"] {
-        flex: 1; /* Makes date inputs take up available space */
-        min-width: 90px;
+        flex: 1;
+        /* Makes date inputs take up available space */
+        min-width: 100px;
     }
 
     .date-picker-container button {
-        width: 100%; /* Makes Filter button full width on mobile */
+        width: 100%;
+        /* Makes Filter button full width on mobile */
         padding: 12px;
     }
 }
