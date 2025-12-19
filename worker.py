@@ -3,6 +3,7 @@ import os
 import time
 from multi_stream_recorder import MultiStreamRecorder
 from fingerprint_engine import FingerprintEngine
+import mysql.connector
 
 # Database Configuration from environment variables
 DB_CONFIG = {
