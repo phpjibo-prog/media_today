@@ -37,12 +37,24 @@ class FingerprintEngine:
         """
         Fingerprint a single audio file
         """
+        print("reched fingerprint file")
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
+        
+        song_name = os.path.splitext(os.path.basename(file_path))[0]
+        print(song_name)
 
         print(f"[FINGERPRINT] Fingerprinting file: {file_path}")
-        #self.djv.fingerprint_file(file_path)
-        self.djv.fingerprint_directory("uploads", [".mp3"], 3)
+        
+        try:
+            # Try passing song_name explicitly if your version requires it
+            self.djv.fingerprint_file(file_path, song_name=song_name)
+        except TypeError:
+            # If it still fails with the same error, use the directory method 
+            # pointed at the specific file's folder
+            folder = os.path.dirname(file_path)
+            self.djv.fingerprint_directory(folder, [".mp3"], 1)
+        
         print("[FINGERPRINT] Completed.")
 
     def recognize_file(self, file_path):
