@@ -326,36 +326,44 @@ def upload_youtube():
         flash('Please provide a valid YouTube URL.', 'error')
         return redirect(url_for('home'))
 
-    try:
-        # 1. Download the file
-        track_name, file_path = download_youtube_as_mp3(youtube_url, app.config['UPLOAD_FOLDER'])
+    # Create a temp directory if it doesn't exist
+    temp_folder = os.path.join(app.root_path, 'temp/')
+    os.makedirs(temp_folder, exist_ok=True)
 
-        # 2. Insert into database
+    file_path = None
+    try:
+        # 1. Download to the TEMP folder
+        track_name, file_path = download_youtube_as_mp3(youtube_url, temp_folder)
+
+        # 2. Add to Database first (so we have a record)
         conn = get_db_connection()
         if conn:
             cursor = conn.cursor()
-            sql = """
-                INSERT INTO user_tracks (user_id, track_name, file_path, upload_time) 
-                VALUES (%s, %s, %s, NOW())
-            """
-            cursor.execute(sql, (user_id, track_name, file_path))
+            sql = "INSERT INTO user_tracks (user_id, track_name, file_path, upload_time) VALUES (%s, %s, %s, NOW())"
+            # Note: file_path here is temp, you might want to store 'YouTube' or just the name
+            cursor.execute(sql, (user_id, track_name, "Temporary (Deleted)"))
             conn.commit()
             cursor.close()
             conn.close()
 
-            # 3. Fingerprint the new file so the recorder can recognize it
-            fingerprint.fingerprint_folder(app.config['UPLOAD_FOLDER'])
-            
-            flash(f'Successfully downloaded: {track_name}', 'success')
-        else:
-            flash("Database connection failed.", 'error')
+        # 3. Fingerprint the file while it exists in temp
+        # We use fingerprint_file() instead of fingerprint_folder()
+        fingerprint.fingerprint_file(file_path)
+        
+        flash(f'Successfully fingerprinted YouTube track: {track_name}', 'success')
 
     except Exception as e:
-        print(f"YouTube Download Error: {e}")
-        flash('Failed to download audio from YouTube. Please check the URL.', 'error')
+        print(f"YouTube Error: {e}")
+        flash('Failed to process YouTube link.', 'error')
+
+    finally:
+        # 4. DELETE the file after fingerprinting is done
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"[TEMP] Deleted temporary file: {file_path}")
 
     return redirect(url_for('home'))
-
+    
 @app.route("/db-test")
 def db_test():
     try:
