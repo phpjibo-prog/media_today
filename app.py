@@ -341,35 +341,19 @@ def upload_youtube():
         conn = get_db_connection()
         if conn:
             cursor = conn.cursor()
-            sql = "INSERT INTO user_tracks (user_id, track_name, file_path, upload_time) VALUES (%s, %s, %s, NOW())"
+            sql = "INSERT INTO user_tracks (user_id, track_name, file_path, upload_time, status) VALUES (%s, %s, %s, NOW(), 'pending')"
             # Note: file_path here is temp, you might want to store 'YouTube' or just the name
-            cursor.execute(sql, (user_id, track_name, "Temporary (Deleted)"))
+            cursor.execute(sql, (user_id, track_name, file_path))
             conn.commit()
             cursor.close()
             conn.close()
 
-        # 3. Fingerprint the file while it exists in temp
-        # We use fingerprint_file() instead of fingerprint_folder()
-        if os.path.exists(file_path):
-            print("DEBUG: File verified. Starting fingerprinting...")
-            # Use the engine's method
-            fingerprint.fingerprint_file(file_path) 
-            flash(f'Successfully fingerprinted YouTube track: {track_name}', 'success')
-        else:
-            print("DEBUG: File path does not exist after download!")
-        
-        
-        
+        flash(f'Track queued for processing: {track_name}', 'success') 
 
     except Exception as e:
         print(f"YouTube Error: {e}")
         flash('Failed to process YouTube link.', 'error')
-
-    finally:
-        # 4. DELETE the file after fingerprinting is done
-        if file_path and os.path.exists(file_path):
-            os.remove(file_path)
-            print(f"[TEMP] Deleted temporary file: {file_path}")
+ 
 
     return redirect(url_for('home'))
     
