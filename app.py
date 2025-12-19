@@ -333,7 +333,9 @@ def upload_youtube():
     file_path = None
     try:
         # 1. Download to the TEMP folder
+        print(f"DEBUG: Starting download for {youtube_url}")
         track_name, file_path = download_youtube_as_mp3(youtube_url, temp_folder)
+        print(f"DEBUG: Download complete. Path: {file_path}")
 
         # 2. Add to Database first (so we have a record)
         conn = get_db_connection()
@@ -348,10 +350,16 @@ def upload_youtube():
 
         # 3. Fingerprint the file while it exists in temp
         # We use fingerprint_file() instead of fingerprint_folder()
-        fingerprint.fingerprint_file(file_path)
+        if os.path.exists(file_path):
+            print("DEBUG: File verified. Starting fingerprinting...")
+            # Use the engine's method
+            fingerprint.fingerprint_file(file_path) 
+            flash(f'Successfully fingerprinted YouTube track: {track_name}', 'success')
+        else:
+            print("DEBUG: File path does not exist after download!")
         
-        flash(f'Successfully fingerprinted YouTube track: {track_name}', 'success')
-
+        
+        
 
     except Exception as e:
         print(f"YouTube Error: {e}")
