@@ -44,7 +44,7 @@ def main():
             track = cursor.fetchone()
 
             print("It has reached select tracks with pending status")
-             print(f"[WORKER] Found pending track: {track['track_name']}")
+             print(track_name)
             if track:
                 print(f"[WORKER] Found pending track: {track['track_name']}")
                 
