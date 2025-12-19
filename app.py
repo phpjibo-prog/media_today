@@ -352,6 +352,7 @@ def upload_youtube():
         
         flash(f'Successfully fingerprinted YouTube track: {track_name}', 'success')
 
+
     except Exception as e:
         print(f"YouTube Error: {e}")
         flash('Failed to process YouTube link.', 'error')
