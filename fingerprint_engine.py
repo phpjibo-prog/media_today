@@ -45,6 +45,7 @@ class FingerprintEngine:
         folder = os.path.dirname(abs_path)
         song_name = os.path.splitext(os.path.basename(file_path))[0]
         print(song_name)
+        print(f"[FINGERPRINT] Processing: {abs_path}")
         print(f"[FINGERPRINT] Processing folder: {folder}")
         print(f"[FINGERPRINT] Fingerprinting file: {file_path}")
         
@@ -59,7 +60,7 @@ class FingerprintEngine:
             self.djv.fingerprint_directory(folder, [".mp3"], 1)
         
         print("[FINGERPRINT] Completed.")
-
+            
     def recognize_file(self, file_path):
         """
         Recognize audio fingerprint in a file
