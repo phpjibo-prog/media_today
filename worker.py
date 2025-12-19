@@ -39,7 +39,7 @@ def main():
             cursor = conn.cursor(dictionary=True)
 
             # 1. Fetch one pending track
-            cursor.execute("SELECT id, track_name, file_path FROM user_tracks WHERE status = 'pending' LIMIT 1")
+            cursor.execute("SELECT track_id, track_name, file_path FROM user_tracks WHERE status = 'pending' LIMIT 1")
             track = cursor.fetchone()
 
             if track:
@@ -50,11 +50,11 @@ def main():
                     f_engine.fingerprint_file(track['file_path'])
                     
                     # 3. Mark as completed
-                    cursor.execute("UPDATE user_tracks SET status = 'completed' WHERE id = %s", (track['id'],))
+                    cursor.execute("UPDATE user_tracks SET status = 'completed' WHERE track_id = %s", (track['track_id'],))
                     print(f"[WORKER] Successfully processed: {track['track_name']}")
                 else:
                     print(f"[WORKER] File not found: {track['file_path']}")
-                    cursor.execute("UPDATE user_tracks SET status = 'failed' WHERE id = %s", (track['id'],))
+                    cursor.execute("UPDATE user_tracks SET status = 'failed' WHERE track_id = %s", (track['track_id'],))
                 
                 conn.commit()
             
