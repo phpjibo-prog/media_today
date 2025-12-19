@@ -7,3 +7,4 @@ scipy
 matplotlib
 mysql-connector-python
 psycopg2
+yt_dlp
