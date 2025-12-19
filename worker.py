@@ -18,19 +18,52 @@ def main():
     # Initialize the recorder
     recorder = MultiStreamRecorder(DB_CONFIG)
     
-    # Start the loop directly (do not use .start() as a thread, 
-    # just run the _loop logic in the main process)
-    try:
-        # We call the internal loop directly so the process stays alive
-        recorder._loop()
-    except KeyboardInterrupt:
-        print("Worker stopping...")
-        recorder.stop()
-    except Exception as e:
-        print(f"CRITICAL WORKER ERROR: {e}")
-        # Wait a bit before crashing so we don't spam restarts
-        time.sleep(10)
-        raise e
+    # Ensure FingerprintEngine uses the DB_CONFIG properly
+    f_engine = FingerprintEngine(
+        db_host=DB_CONFIG['host'],
+        db_user=DB_CONFIG['user'],
+        db_password=DB_CONFIG['password'],
+        db_name=DB_CONFIG['database'],
+        db_port=DB_CONFIG['port']
+    )
 
+    # Start the recorder in a separate thread/background
+    recorder.start()
+
+    while True:
+        conn = None
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+
+            # 1. Fetch one pending track
+            cursor.execute("SELECT id, track_name, file_path FROM user_tracks WHERE status = 'pending' LIMIT 1")
+            track = cursor.fetchone()
+
+            if track:
+                print(f"[WORKER] Found pending track: {track['track_name']}")
+                
+                if os.path.exists(track['file_path']):
+                    # 2. Perform Fingerprinting (Heavy CPU Task)
+                    f_engine.fingerprint_file(track['file_path'])
+                    
+                    # 3. Mark as completed
+                    cursor.execute("UPDATE user_tracks SET status = 'completed' WHERE id = %s", (track['id'],))
+                    print(f"[WORKER] Successfully processed: {track['track_name']}")
+                else:
+                    print(f"[WORKER] File not found: {track['file_path']}")
+                    cursor.execute("UPDATE user_tracks SET status = 'failed' WHERE id = %s", (track['id'],))
+                
+                conn.commit()
+            
+            cursor.close()
+        except Exception as e:
+            print(f"[WORKER ERROR]: {e}")
+        finally:
+            if conn and conn.is_connected():
+                conn.close()
+
+        # Sleep to prevent high CPU usage while idle
+        time.sleep(10)
 if __name__ == '__main__':
     main()
