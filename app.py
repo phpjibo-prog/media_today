@@ -319,42 +319,29 @@ def upload_youtube():
         flash('You must be logged in to use this feature.', 'error')
         return redirect(url_for('home'))
 
-    user_id = session.get('user_data', {}).get('db_id')
     youtube_url = request.form.get('youtube_url')
-
+    user_id = session.get('user_data', {}).get('db_id')
+    
     if not youtube_url:
-        flash('Please provide a valid YouTube URL.', 'error')
+        flash("Please provide a valid URL", "error")
         return redirect(url_for('home'))
 
-    # Create a temp directory if it doesn't exist
-    temp_folder = os.path.join(os.getcwd(), 'temp/')
-    os.makedirs(temp_folder, exist_ok=True)
-
-    file_path = None
     try:
-        # 1. Download to the TEMP folder
-        print(f"DEBUG: Starting download for {youtube_url}")
-        track_name, file_path = download_youtube_as_mp3(youtube_url, temp_folder)
-        abs_file_path = os.path.abspath(file_path)
-        print(f"DEBUG: Download complete. Path: {abs_file_path}")
-
-        # 2. Add to Database first (so we have a record)
         conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor()
-            sql = "INSERT INTO user_tracks (user_id, track_name, file_path, upload_time, status) VALUES (%s, %s, %s, NOW(), 'pending')"
-            # Note: file_path here is temp, you might want to store 'YouTube' or just the name
-            cursor.execute(sql, (user_id, track_name, file_path))
-            conn.commit()
-            cursor.close()
-            conn.close()
-
-        flash(f'Track queued for processing: {track_name}', 'success') 
-
+        cursor = conn.cursor()
+        # We save the URL in the 'file_path' column temporarily or a new 'url' column
+        # and set status to 'pending_download'
+        sql = """INSERT INTO user_tracks (user_id, track_name, file_path, status, upload_time) 
+                 VALUES (%s, %s, %s, %s, NOW())"""
+        cursor.execute(sql, (user_id, "YouTube Pending", youtube_url, 'pending_download'))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash("Link submitted! The worker is downloading it now.", "success")
     except Exception as e:
-        print(f"YouTube Error: {e}")
-        flash('Failed to process YouTube link.', 'error')
- 
+        print(f"Error: {e}")
+        flash("Failed to queue download.", "error")
 
     return redirect(url_for('home'))
     
