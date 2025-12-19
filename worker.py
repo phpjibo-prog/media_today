@@ -35,6 +35,7 @@ def main():
     while True:
         conn = None
         try:
+            print("It has reached while and try block")
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor(dictionary=True)
 
@@ -42,6 +43,8 @@ def main():
             cursor.execute("SELECT track_id, track_name, file_path FROM user_tracks WHERE status = 'pending' LIMIT 1")
             track = cursor.fetchone()
 
+            print("It has reached select tracks with pending status")
+            
             if track:
                 print(f"[WORKER] Found pending track: {track['track_name']}")
                 
