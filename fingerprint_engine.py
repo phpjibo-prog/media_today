@@ -41,14 +41,17 @@ class FingerprintEngine:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
         
+        abs_path = os.path.abspath(file_path)
+        folder = os.path.dirname(abs_path)
         song_name = os.path.splitext(os.path.basename(file_path))[0]
         print(song_name)
-
+        print(f"[FINGERPRINT] Processing folder: {folder}")
         print(f"[FINGERPRINT] Fingerprinting file: {file_path}")
         
         try:
             # Try passing song_name explicitly if your version requires it
-            self.djv.fingerprint_file(file_path, song_name=song_name)
+            self.djv.fingerprint_directory(folder, [".mp3"], nprocesses=1)
+            print("[FINGERPRINT] Successfully completed on Railway.")
         except TypeError:
             # If it still fails with the same error, use the directory method 
             # pointed at the specific file's folder
