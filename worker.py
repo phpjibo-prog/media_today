@@ -32,35 +32,49 @@ def main():
     # Start the recorder in a separate thread/background
     #recorder.start()
 
+    f_engine = FingerprintEngine(**DB_CONFIG) # Assuming your class takes these
+    temp_folder = os.path.join(os.getcwd(), 'temp')
+    os.makedirs(temp_folder, exist_ok=True)
+
     while True:
         conn = None
         try:
-            print("It has reached while and try block")
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor(dictionary=True)
 
-            # 1. Fetch one pending track
-            cursor.execute("SELECT track_id, track_name, file_path FROM user_tracks WHERE status = 'pending' LIMIT 1")
-            track = cursor.fetchone()
+            # Look for tracks waiting to be downloaded
+            cursor.execute("SELECT track_id, file_path FROM user_tracks WHERE status = 'pending_download' LIMIT 1")
+            job = cursor.fetchone()
 
-            print("It has reached select tracks with pending status")
-            
-            if track:
-                print(f"[WORKER] Found pending track: {track['track_name']}")
-                
-                if os.path.exists(track['file_path']):
-                    # 2. Perform Fingerprinting (Heavy CPU Task)
-                    f_engine.fingerprint_file(track['file_path'])
+            if job:
+                track_id = job['track_id']
+                url = job['file_path'] # The URL we saved in app.py
+
+                print(f"[WORKER] Starting download for URL: {url}")
+                try:
+                    # 1. DOWNLOAD
+                    track_name, local_path = download_youtube_as_mp3(url, temp_folder)
+                    abs_path = os.path.abspath(local_path)
                     
-                    # 3. Mark as completed
-                    cursor.execute("UPDATE user_tracks SET status = 'completed' WHERE track_id = %s", (track['track_id'],))
-                    print(f"[WORKER] Successfully processed: {track['track_name']}")
-                else:
-                    print(f"[WORKER] File not found: {track['file_path']}")
-                    cursor.execute("UPDATE user_tracks SET status = 'failed' WHERE track_id = %s", (track['track_id'],))
+                    # 2. FINGERPRINT
+                    print(f"[WORKER] Downloading finished. Fingerprinting: {track_name}")
+                    f_engine.fingerprint_file(abs_path)
+
+                    # 3. UPDATE DB
+                    cursor.execute("""UPDATE user_tracks SET 
+                                      track_name = %s, 
+                                      file_path = %s, 
+                                      status = 'completed' 
+                                      WHERE track_id = %s""", 
+                                   (track_name, abs_path, track_id))
+                    print(f"[WORKER] Success: {track_name}")
+
+                except Exception as download_err:
+                    print(f"[WORKER] Download/Fingerprint failed: {download_err}")
+                    cursor.execute("UPDATE user_tracks SET status = 'failed' WHERE track_id = %s", (track_id,))
                 
                 conn.commit()
-            
+
             cursor.close()
         except Exception as e:
             print(f"[WORKER ERROR]: {e}")
@@ -68,7 +82,6 @@ def main():
             if conn and conn.is_connected():
                 conn.close()
 
-        # Sleep to prevent high CPU usage while idle
         time.sleep(10)
 if __name__ == '__main__':
     main()
