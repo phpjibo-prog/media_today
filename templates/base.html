@@ -89,6 +89,22 @@
                 {% endif %}
             </div>
         </details>
+
+        <details class="upload-dropdown-class">
+            <summary>Paste YouTube Link</summary>
+            <div class="dropdown-form-content">
+                {% if logged_in %}
+                <form action="{{ url_for('upload_youtube') }}" method="POST" class="center-form">
+                    <label for="youtube_url">YouTube URL:</label>
+                    <input type="url" id="youtube_url" name="youtube_url"
+                        placeholder="https://www.youtube.com/watch?v=..." required>
+                    <button type="submit">Download & Add Track</button>
+                </form>
+                {% else %}
+                <p style="color:red; text-align: center;">Login first to download from YouTube.</p>
+                {% endif %}
+            </div>
+        </details>
     </div>
 
     <main class="content">
