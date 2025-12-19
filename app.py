@@ -313,6 +313,14 @@ def home():
         total_songs=total_songs
     )
 
+@app.route('/debug-files')
+def debug_files():
+    if not session.get('user_data', {}).get('is_admin'):
+        return "Access Denied", 403
+        
+    files = os.listdir(app.config['UPLOAD_FOLDER'])
+    return f"<h3>Files in Uploads:</h3><ul>" + "".join([f"<li>{f}</li>" for f in files]) + "</ul>"
+
 @app.route('/upload-youtube', methods=['POST'])
 def upload_youtube():
     if not session.get('logged_in'):
