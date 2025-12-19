@@ -10,6 +10,7 @@ from multi_stream_recorder import MultiStreamRecorder
 from fingerprint_engine import FingerprintEngine
 from radio_manager import RadioManager
 from user_tracker import UserTracker
+from youtube_downloader import download_youtube_as_mp3
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -311,6 +312,49 @@ def home():
         current_date_value=session.get('filter_date_value', ''),
         total_songs=total_songs
     )
+
+@app.route('/upload-youtube', methods=['POST'])
+def upload_youtube():
+    if not session.get('logged_in'):
+        flash('You must be logged in to use this feature.', 'error')
+        return redirect(url_for('home'))
+
+    user_id = session.get('user_data', {}).get('db_id')
+    youtube_url = request.form.get('youtube_url')
+
+    if not youtube_url:
+        flash('Please provide a valid YouTube URL.', 'error')
+        return redirect(url_for('home'))
+
+    try:
+        # 1. Download the file
+        track_name, file_path = download_youtube_as_mp3(youtube_url, app.config['UPLOAD_FOLDER'])
+
+        # 2. Insert into database
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            sql = """
+                INSERT INTO user_tracks (user_id, track_name, file_path, upload_time) 
+                VALUES (%s, %s, %s, NOW())
+            """
+            cursor.execute(sql, (user_id, track_name, file_path))
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            # 3. Fingerprint the new file so the recorder can recognize it
+            fingerprint.fingerprint_folder(app.config['UPLOAD_FOLDER'])
+            
+            flash(f'Successfully downloaded: {track_name}', 'success')
+        else:
+            flash("Database connection failed.", 'error')
+
+    except Exception as e:
+        print(f"YouTube Download Error: {e}")
+        flash('Failed to download audio from YouTube. Please check the URL.', 'error')
+
+    return redirect(url_for('home'))
 
 @app.route("/db-test")
 def db_test():
@@ -691,7 +735,7 @@ def api_toggle_follow():
     return jsonify({"success": success, "message": message})
 
 if __name__ == '__main__':
-    recorder.start()          # Start background radio recording
+    #recorder.start()          # Start background radio recording
     #start_recorder()
     print(">>> Recorder Started <<<")
     app.run(debug=True)
