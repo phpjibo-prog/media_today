@@ -364,16 +364,47 @@ def recognize_live_stream():
         # 5. MATCH LOGIC
         # Dejavu returns a list of matches in results['results']
         # If the list is not empty, it found a match.
-        has_matches = len(clean_results.get('results', [])) > 0
-        
-        if has_matches:
-            # Get the top match details
-            top_match = clean_results['results'][0]
-            song_name = top_match.get('song_name', 'Unknown')
-            message = f"MATCH FOUND: This song is '{song_name}'"
-        else:
-            message = "MATCH NOT FOUND: No record of this audio in our database."
+        @app.route('/api/recognize_live_stream', methods=['GET'])
+def recognize_live_stream():
+    # ... (Keep your recording logic the same) ...
 
+    try:
+        # 1. Get raw results from Dejavu
+        raw_results = fingerprint.recognize_file(file_path)
+        clean_results = json_serializable(raw_results)
+
+        # 2. Match Logic with Threshold
+        # Confidence is usually found in results[0]['input_confidence'] or 'fingerprinted_hashes_in_db'
+        matches = clean_results.get('results', [])
+        
+        # We define a "True Match" as having results AND high confidence
+        # A value of 20-30 is usually a safe "low" threshold. 
+        # Increase to 50+ for "Exact Match Only"
+        CONFIDENCE_THRESHOLD = 30 
+        
+        is_exact_match = False
+        message = "MATCH NOT FOUND: No exact record matches this audio."
+
+        if matches:
+            top_match = matches[0]
+            # Dejavu usually returns 'input_confidence' or 'hashes_matched_in_input'
+            confidence = top_match.get('input_confidence', 0)
+            
+            if confidence >= CONFIDENCE_THRESHOLD:
+                is_exact_match = True
+                song_name = top_match.get('song_name', 'Unknown')
+                message = f"MATCH FOUND: Exact match for '{song_name}' (Confidence: {confidence})"
+            else:
+                message = f"MATCH REJECTED: Found {top_match.get('song_name')} but confidence too low ({confidence})."
+
+        return jsonify({
+            "status": "success",
+            "match_found": is_exact_match,
+            "message": message,
+            "details": clean_results
+        })
+
+    except Exception as e:
         return jsonify({
             "status": "success",
             "message": message,
