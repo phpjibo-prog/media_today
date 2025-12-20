@@ -32,7 +32,6 @@ def main():
     # Start the recorder in a separate thread/background
     #recorder.start()
 
-    f_engine = FingerprintEngine(**DB_CONFIG) # Assuming your class takes these
     temp_folder = os.path.join(os.getcwd(), 'temp')
     os.makedirs(temp_folder, exist_ok=True)
 
