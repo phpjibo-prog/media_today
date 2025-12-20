@@ -19,7 +19,7 @@ def main():
     print("--- Starting Background Audio Worker ---")
     
     # Initialize the recorder
-    recorder = MultiStreamRecorder(DB_CONFIG)
+    #recorder = MultiStreamRecorder(DB_CONFIG)
     
     # Ensure FingerprintEngine uses the DB_CONFIG properly
     f_engine = FingerprintEngine(
@@ -31,7 +31,7 @@ def main():
     )
 
     # Start the recorder in a separate thread/background
-    recorder.start()
+    #recorder.start()
 
     temp_folder = os.path.join(os.getcwd(), 'temp')
     os.makedirs(temp_folder, exist_ok=True)
@@ -74,14 +74,6 @@ def main():
                     cursor.execute("UPDATE user_tracks SET status = 'failed' WHERE track_id = %s", (track_id,))
                 
                 conn.commit()
-                finally:
-                    # 4. DELETE FILE TO SAVE SPACE
-                    if local_path and os.path.exists(local_path):
-                        try:
-                            os.remove(local_path)
-                            print(f"[WORKER] Deleted temporary file: {local_path}")
-                        except Exception as e:
-                            print(f"[WORKER] Cleanup Error: {e}")
 
             cursor.close()
         except Exception as e:
@@ -89,6 +81,13 @@ def main():
         finally:
             if conn and conn.is_connected():
                 conn.close()
+
+            if local_path and os.path.exists(local_path):
+                        try:
+                            os.remove(local_path)
+                            print(f"[WORKER] Deleted temporary file: {local_path}")
+                        except Exception as e:
+                            print(f"[WORKER] Cleanup Error: {e}")
 
         time.sleep(10)
 if __name__ == '__main__':
