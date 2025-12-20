@@ -38,6 +38,7 @@ def main():
 
     while True:
         conn = None
+        local_path = None
         try:
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor(dictionary=True)
