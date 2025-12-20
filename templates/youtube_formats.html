@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>YouTube Video / Audio Formats</h1>
+
+<form method="POST">
+    <input type="text" name="youtube_url" placeholder="Paste YouTube link here" value="{{ youtube_url }}" required>
+    <button type="submit">Get Formats</button>
+</form>
+
+{% if video_formats %}
+<h2>🎬 Video Formats</h2>
+<table>
+    <tr>
+        <th>Resolution</th>
+        <th>FPS</th>
+        <th>Codec</th>
+        <th>Size</th>
+        <th>Download</th>
+    </tr>
+    {% for v in video_formats %}
+    <tr>
+        <td>{{ v.resolution }}</td>
+        <td>{{ v.fps }}</td>
+        <td>{{ v.vcodec }} ({{ v.ext }})</td>
+        <td>
+            {% if v.filesize %}
+                {{ (v.filesize / 1024 / 1024) | round(2) }} MB
+            {% else %}
+                ?
+            {% endif %}
+        </td>
+        <td>
+            <a href="{{ v.url }}" target="_blank">Download</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+{% if audio_formats %}
+<h2>🎵 Audio Formats</h2>
+<table>
+    <tr>
+        <th>Bitrate</th>
+        <th>Codec</th>
+        <th>Size</th>
+        <th>Download</th>
+    </tr>
+    {% for a in audio_formats %}
+    <tr>
+        <td>{{ a.abr }} kbps</td>
+        <td>{{ a.acodec }} ({{ a.ext }})</td>
+        <td>
+            {% if a.filesize %}
+                {{ (a.filesize / 1024 / 1024) | round(2) }} MB
+            {% else %}
+                ?
+            {% endif %}
+        </td>
+        <td>
+            <a href="{{ a.url }}" target="_blank">Download</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+{% endblock %}
