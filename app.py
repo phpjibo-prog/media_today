@@ -363,23 +363,9 @@ def recognize_live_stream():
                     break
         
         # 2. Decode to WAV for high-accuracy fingerprinting
-        #audio = AudioSegment.from_file(mp3_path)
-        #audio.export(wav_path, format="wav")
-
-        wav_path = mp3_path.replace(".mp3", ".wav")
-
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-i", stream_url,
-            "-t", str(duration),
-            "-ac", "1",
-            "-ar", "44100",
-            wav_path
-        ]
-
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
+        audio = AudioSegment.from_file(mp3_path)
+        audio.export(wav_path, format="wav")
+        
         if os.path.exists(mp3_path):
             os.remove(mp3_path)
 
