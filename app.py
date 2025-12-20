@@ -13,6 +13,7 @@ from user_tracker import UserTracker
 from youtube_downloader import download_youtube_as_mp3
 import requests
 import time
+import numpy as np
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -227,6 +228,21 @@ def calculate_date_range(date_type, date_value):
         
     return start_date, end_date
 
+def json_serializable(data):
+    """Recursively convert data to be JSON serializable."""
+    if isinstance(data, dict):
+        return {k: json_serializable(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [json_serializable(i) for i in data]
+    elif isinstance(data, bytes):
+        return data.decode('utf-8', errors='ignore')
+    elif isinstance(data, (np.int64, np.int32)):
+        return int(data)
+    elif isinstance(data, (np.float64, np.float32)):
+        return float(data)
+    else:
+        return data
+
 # Add this function to track online status (runs before every request)
 @app.before_request
 def update_last_seen():
@@ -338,31 +354,23 @@ def recognize_live_stream():
         # 2. Recognize
         raw_results = fingerprint.recognize_file(file_path)
 
-        # 3. FIX: Convert bytes to strings for JSON serialization
-        # Dejavu results usually contain a list of matches in raw_results['results']
-        if isinstance(raw_results, dict):
-            for result in raw_results.get('results', []):
-                for key, value in result.items():
-                    if isinstance(value, bytes):
-                        result[key] = value.decode('utf-8')
-            # Also check the top level for bytes (like file_sha1)
-            for key, value in raw_results.items():
-                if isinstance(value, bytes):
-                    raw_results[key] = value.decode('utf-8')
-
-        # 4. Clean up file
+        # 3. Clean up the file before processing data to ensure it's deleted
         if os.path.exists(file_path):
             os.remove(file_path)
 
+        # 4. FIX: Use the recursive cleaner to fix int64 and bytes
+        clean_results = json_serializable(raw_results)
+
         return jsonify({
             "status": "success",
-            "results": raw_results
+            "results": clean_results
         })
 
     except Exception as e:
         if os.path.exists(file_path):
             os.remove(file_path)
         return f"Recognition failed: {str(e)}", 500
+
 @app.route('/upload-youtube', methods=['POST'])
 def upload_youtube():
     if not session.get('logged_in'):
