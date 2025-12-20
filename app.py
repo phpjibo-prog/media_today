@@ -354,16 +354,31 @@ def recognize_live_stream():
         # 2. Recognize
         raw_results = fingerprint.recognize_file(file_path)
 
-        # 3. Clean up the file before processing data to ensure it's deleted
+        # 3. Clean up the file
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        # 4. FIX: Use the recursive cleaner to fix int64 and bytes
+        # 4. JSON Serializable Fix
         clean_results = json_serializable(raw_results)
+
+        # 5. MATCH LOGIC
+        # Dejavu returns a list of matches in results['results']
+        # If the list is not empty, it found a match.
+        has_matches = len(clean_results.get('results', [])) > 0
+        
+        if has_matches:
+            # Get the top match details
+            top_match = clean_results['results'][0]
+            song_name = top_match.get('song_name', 'Unknown')
+            message = f"MATCH FOUND: This song is '{song_name}'"
+        else:
+            message = "MATCH NOT FOUND: No record of this audio in our database."
 
         return jsonify({
             "status": "success",
-            "results": clean_results
+            "message": message,
+            "match_found": has_matches,
+            "details": clean_results
         })
 
     except Exception as e:
