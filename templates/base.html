@@ -110,11 +110,15 @@
                 <script>
                     document.getElementById('fetch-options-btn').addEventListener('click', function() {
                         const url = document.getElementById('youtube_url').value;
-                        if(!url) { alert("Please paste a URL first"); return; }
+                        if(!url) { alert("Please paste a YouTube URL"); return; }
                         
                         const btn = this;
-                        btn.innerText = "Fetching...";
+                        const list = document.getElementById('options-list');
+                        const container = document.getElementById('youtube-options-container');
                         
+                        btn.innerText = "Finding Links...";
+                        list.innerHTML = ''; // Clear previous results
+                    
                         fetch('/api/get_youtube_options', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
@@ -123,23 +127,29 @@
                         .then(res => res.json())
                         .then(data => {
                             btn.innerText = "Download Video or MP3";
-                            const container = document.getElementById('youtube-options-container');
-                            const list = document.getElementById('options-list');
-                            list.innerHTML = '';
-                            
-                            if(data.success) {
+                            if(data.success && data.formats.length > 0) {
                                 container.style.display = 'block';
+                                
                                 data.formats.forEach(f => {
-                                    const link = document.createElement('a');
-                                    link.className = 'yt-dl-link';
-                                    link.href = f.url;
-                                    link.target = "_blank";
-                                    link.innerHTML = `<span>${f.ext.toUpperCase()}</span> <span>${f.resolution}</span>`;
-                                    list.appendChild(link);
+                                    const item = document.createElement('div');
+                                    item.className = 'yt-option-item';
+                                    item.innerHTML = `
+                                        <div class="yt-info">
+                                            <strong>${f.ext}</strong> - ${f.quality}
+                                        </div>
+                                        <a href="${f.url}" target="_blank" download class="yt-download-btn">
+                                            Download
+                                        </a>
+                                    `;
+                                    list.appendChild(item);
                                 });
                             } else {
-                                alert("Error: " + data.message);
+                                alert("Could not find direct links. The video might be restricted.");
                             }
+                        })
+                        .catch(err => {
+                            btn.innerText = "Download Video or MP3";
+                            console.error(err);
                         });
                     });
                 </script>
