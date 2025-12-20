@@ -18,6 +18,7 @@ import numpy as np
 from flask import send_from_directory
 import json
 import subprocess
+from yt_fetcher import fetch_youtube_formats
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -481,6 +482,16 @@ def db_test():
         return f"CONNECTED ✅ Tables: {tables}"
     except Exception as e:
         return f"DB FAILED ❌ {e}"
+
+@app.route('/api/get_youtube_options', methods=['POST'])
+def get_youtube_options():
+    data = request.get_json()
+    url = data.get('url')
+    if not url:
+        return jsonify({"success": False, "message": "No URL provided"})
+    
+    success, formats = fetch_youtube_formats(url)
+    return jsonify({"success": success, "formats": formats if success else [], "message": "" if success else formats})
 
 @app.route("/start-recorder")
 def start_recorder():
