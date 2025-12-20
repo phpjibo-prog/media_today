@@ -3,6 +3,7 @@ import os
 import time
 from multi_stream_recorder import MultiStreamRecorder
 from fingerprint_engine import FingerprintEngine
+from youtube_downloader import download_youtube_as_mp3
 import mysql.connector
 
 # Database Configuration from environment variables
