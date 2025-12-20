@@ -394,14 +394,6 @@ def recognize_live_stream():
         })
 
     except Exception as e:
-        return jsonify({
-            "status": "success",
-            "message": message,
-            "match_found": has_matches,
-            "details": clean_results
-        })
-
-    except Exception as e:
         if os.path.exists(file_path):
             os.remove(file_path)
         return f"Recognition failed: {str(e)}", 500
