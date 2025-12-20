@@ -17,6 +17,7 @@ import time
 import numpy as np
 from flask import send_from_directory
 import json
+import subprocess
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -362,9 +363,23 @@ def recognize_live_stream():
                     break
         
         # 2. Decode to WAV for high-accuracy fingerprinting
-        audio = AudioSegment.from_file(mp3_path)
-        audio.export(wav_path, format="wav")
-        
+        #audio = AudioSegment.from_file(mp3_path)
+        #audio.export(wav_path, format="wav")
+
+        wav_path = mp3_path.replace(".mp3", ".wav")
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", stream_url,
+            "-t", str(duration),
+            "-ac", "1",
+            "-ar", "44100",
+            wav_path
+        ]
+
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
         if os.path.exists(mp3_path):
             os.remove(mp3_path)
 
