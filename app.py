@@ -362,17 +362,6 @@ def recognize_live_stream():
         clean_results = json_serializable(raw_results)
 
         # 5. MATCH LOGIC
-        # Dejavu returns a list of matches in results['results']
-        # If the list is not empty, it found a match.
-        @app.route('/api/recognize_live_stream', methods=['GET'])
-def recognize_live_stream():
-    # ... (Keep your recording logic the same) ...
-
-    try:
-        # 1. Get raw results from Dejavu
-        raw_results = fingerprint.recognize_file(file_path)
-        clean_results = json_serializable(raw_results)
-
         # 2. Match Logic with Threshold
         # Confidence is usually found in results[0]['input_confidence'] or 'fingerprinted_hashes_in_db'
         matches = clean_results.get('results', [])
@@ -417,6 +406,8 @@ def recognize_live_stream():
             os.remove(file_path)
         return f"Recognition failed: {str(e)}", 500
 
+
+        
 @app.route('/upload-youtube', methods=['POST'])
 def upload_youtube():
     if not session.get('logged_in'):
