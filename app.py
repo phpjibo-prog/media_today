@@ -15,6 +15,7 @@ from pydub import AudioSegment
 import requests
 import time
 import numpy as np
+from flask import send_from_directory
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -332,21 +333,22 @@ def home():
         total_songs=total_songs
     )
 
+VERIFY_FOLDER = 'static/recordings'
+os.makedirs(VERIFY_FOLDER, exist_ok=True)
+
 @app.route('/api/recognize_live_stream', methods=['GET'])
 def recognize_live_stream():
     stream_url = request.args.get('stream_url')
     if not stream_url:
         return "Error: Missing stream_url parameter", 400
 
-    record_dir = os.path.join(os.getcwd(), 'recordings')
-    os.makedirs(record_dir, exist_ok=True)
-    
     timestamp = int(time.time())
-    mp3_path = os.path.join(record_dir, f"temp_{timestamp}.mp3")
-    wav_path = os.path.join(record_dir, f"temp_{timestamp}.wav")
+    mp3_path = os.path.join(VERIFY_FOLDER, f"temp_{timestamp}.mp3")
+    wav_filename = f"verify_{timestamp}.wav"
+    wav_path = os.path.join(VERIFY_FOLDER, wav_filename)
 
     try:
-        # 1. Record 10 seconds of stream
+        # Record 10 seconds
         response = requests.get(stream_url, stream=True, timeout=15)
         start_time = time.time()
         with open(mp3_path, 'wb') as f:
@@ -355,57 +357,66 @@ def recognize_live_stream():
                 if time.time() - start_time > 10:
                     break
         
-        # 2. Decode MP3 to WAV
-        # This ensures the fingerprint engine works with raw linear PCM data
+        # Decode to WAV for recognition
         audio = AudioSegment.from_file(mp3_path)
         audio.export(wav_path, format="wav")
-        print(f"[RECOGNIZE] Converted to WAV: {wav_path}")
+        
+        # Clean up the intermediate MP3, but KEEP the WAV
+        if os.path.exists(mp3_path):
+            os.remove(mp3_path)
 
-        # 3. Recognize the WAV file
+        # Recognize
         raw_results = fingerprint.recognize_file(wav_path)
         clean_results = json_serializable(raw_results)
 
-        # 4. Cleanup both temporary files
-        for p in [mp3_path, wav_path]:
-            if os.path.exists(p):
-                os.remove(p)
-
-        # 5. Advanced Matching Logic
         matches = clean_results.get('results', [])
-        is_exact_match = False
-        message = "MATCH NOT FOUND"
+        hashes = matches[0].get('hashes_matched_in_input', 0) if matches else 0
+        conf = matches[0].get('input_confidence', 0) if matches else 0
+        song = matches[0].get('song_name', 'Unknown') if matches else "No Match"
 
-        if matches:
-            top_match = matches[0]
-            
-            # Extract metrics
-            # 'hashes_matched_in_input' is the raw count of matching fingerprints
-            hashes = top_match.get('hashes_matched_in_input', 0)
-            confidence = top_match.get('input_confidence', 0)
-            song_name = top_match.get('song_name', 'Unknown')
+        # Determine status
+        is_match = hashes >= 50 and conf >= 8
+        status_msg = f"MATCH FOUND: {song}" if is_match else "MATCH REJECTED / NOT FOUND"
 
-            # Your Custom Rule: if hashes >= 50 and confidence >= 8
-            if hashes >= 50 and confidence >= 8:
-                is_exact_match = True
-                message = f"MATCH FOUND: '{song_name}' (Hashes: {hashes}, Conf: {confidence})"
-            else:
-                message = f"MATCH REJECTED: Metrics too low (Hashes: {hashes}/50, Conf: {confidence}/8)"
-
-        return jsonify({
-            "status": "success",
-            "match_found": is_exact_match,
-            "message": message,
-            "metrics": {
-                "hashes": hashes if matches else 0,
-                "confidence": confidence if matches else 0
-            },
-            "details": clean_results
-        })
+        # Return HTML for manual verification
+        return f"""
+        <html>
+            <body style="font-family: sans-serif; padding: 20px;">
+                <h2>Stream Verification Tool</h2>
+                <div style="background: #f4f4f4; padding: 15px; border-radius: 8px;">
+                    <p><strong>Status:</strong> {status_msg}</p>
+                    <p><strong>Hashes:</strong> {hashes} | <strong>Confidence:</strong> {conf}</p>
+                    
+                    <h4>Listen to the recording:</h4>
+                    <audio controls src="/static/recordings/{wav_filename}"></audio>
+                    
+                    <div style="margin-top: 20px;">
+                        <a href="/api/delete_recording?file={wav_filename}" 
+                           style="background: #ff4444; color: white; padding: 10px; text-decoration: none; border-radius: 5px;">
+                           Delete this file
+                        </a>
+                        <a href="{request.full_path}" style="margin-left: 10px;">Record Again</a>
+                    </div>
+                </div>
+                <hr>
+                <pre>{json.dumps(clean_results, indent=2)}</pre>
+            </body>
+        </html>
+        """
 
     except Exception as e:
-        for p in [mp3_path, wav_path]:
-            if os.path.exists(p): os.remove(p)
-        return f"Recognition failed: {str(e)}", 500
+        return f"Error: {str(e)}", 500
+
+# 2. Add a route to manually delete the file
+@app.route('/api/delete_recording')
+def delete_recording():
+    filename = request.args.get('file')
+    if filename and 'verify_' in filename:
+        file_path = os.path.join(VERIFY_FOLDER, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return f"File {filename} deleted. <a href='/'>Go Home</a>"
+    return "Invalid file request.", 400
         
 @app.route('/upload-youtube', methods=['POST'])
 def upload_youtube():
