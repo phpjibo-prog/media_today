@@ -98,8 +98,51 @@
                     <label for="youtube_url">YouTube URL:</label>
                     <input type="url" id="youtube_url" name="youtube_url"
                         placeholder="https://www.youtube.com/watch?v=..." required>
-                    <button type="submit">Download & Add Track</button>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button type="button" id="fetch-options-btn" style="background-color: #28a745;">Download Video or MP3</button>
+                        <button type="submit">Download & Add Track</button>
+                    </div>
                 </form>
+                <div id="youtube-options-container" style="margin-top: 15px; display: none;">
+                    <p style="font-weight: bold; border-bottom: 1px solid #ddd;">Available Options:</p>
+                    <div id="options-list" class="yt-options-grid"></div>
+                </div>
+                <script>
+                    document.getElementById('fetch-options-btn').addEventListener('click', function() {
+                        const url = document.getElementById('youtube_url').value;
+                        if(!url) { alert("Please paste a URL first"); return; }
+                        
+                        const btn = this;
+                        btn.innerText = "Fetching...";
+                        
+                        fetch('/api/get_youtube_options', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({url: url})
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            btn.innerText = "Download Video or MP3";
+                            const container = document.getElementById('youtube-options-container');
+                            const list = document.getElementById('options-list');
+                            list.innerHTML = '';
+                            
+                            if(data.success) {
+                                container.style.display = 'block';
+                                data.formats.forEach(f => {
+                                    const link = document.createElement('a');
+                                    link.className = 'yt-dl-link';
+                                    link.href = f.url;
+                                    link.target = "_blank";
+                                    link.innerHTML = `<span>${f.ext.toUpperCase()}</span> <span>${f.resolution}</span>`;
+                                    list.appendChild(link);
+                                });
+                            } else {
+                                alert("Error: " + data.message);
+                            }
+                        });
+                    });
+                </script>
                 {% else %}
                 <p style="color:red; text-align: center;">Login first to download from YouTube.</p>
                 {% endif %}
