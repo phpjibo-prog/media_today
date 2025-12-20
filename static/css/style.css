@@ -6,6 +6,38 @@ body {
     background-color: #f4f4f4;
 }
 
+#youtube-options-container {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.yt-option-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.yt-option-item:last-child { border-bottom: none; }
+
+.yt-info { font-size: 0.9rem; color: #333; }
+
+.yt-download-btn {
+    background: #3b5998;
+    color: white !important;
+    text-decoration: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.yt-download-btn:hover { background: #2d4373; }
+
 .site-header {
     /* Use a darker blue/gray for a professional social look */
     background: #3b5998;
