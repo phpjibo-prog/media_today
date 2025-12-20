@@ -19,6 +19,7 @@ from flask import send_from_directory
 import json
 import subprocess
 from yt_fetcher import fetch_youtube_formats
+from youtube_formats import get_youtube_formats
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -338,6 +339,25 @@ def home():
 
 VERIFY_FOLDER = 'static/recordings'
 os.makedirs(VERIFY_FOLDER, exist_ok=True)
+
+@app.route("/youtube-formats", methods=["GET", "POST"])
+def youtube_formats():
+    video_formats = []
+    audio_formats = []
+    youtube_url = ""
+
+    if request.method == "POST":
+        youtube_url = request.form.get("youtube_url")
+        if youtube_url:
+            video_formats, audio_formats = get_youtube_formats(youtube_url)
+
+    return render_template(
+        "youtube_formats.html",
+        video_formats=video_formats,
+        audio_formats=audio_formats,
+        youtube_url=youtube_url
+    )
+
 
 @app.route('/api/recognize_live_stream', methods=['GET'])
 def recognize_live_stream():
