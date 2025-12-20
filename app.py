@@ -342,13 +342,13 @@ def recognize_live_stream():
     file_path = os.path.join(record_dir, f"temp_{int(time.time())}.mp3")
 
     try:
-        # 1. Record 5 seconds
-        response = requests.get(stream_url, stream=True, timeout=10)
+        # 1. Record 10 seconds
+        response = requests.get(stream_url, stream=True, timeout=15)
         start_time = time.time()
         with open(file_path, 'wb') as f:
             for block in response.iter_content(1024):
                 f.write(block)
-                if time.time() - start_time > 5:
+                if time.time() - start_time > 10:
                     break
         
         # 2. Recognize
