@@ -74,6 +74,14 @@ def main():
                     cursor.execute("UPDATE user_tracks SET status = 'failed' WHERE track_id = %s", (track_id,))
                 
                 conn.commit()
+                finally:
+                    # 4. DELETE FILE TO SAVE SPACE
+                    if local_path and os.path.exists(local_path):
+                        try:
+                            os.remove(local_path)
+                            print(f"[WORKER] Deleted temporary file: {local_path}")
+                        except Exception as e:
+                            print(f"[WORKER] Cleanup Error: {e}")
 
             cursor.close()
         except Exception as e:
