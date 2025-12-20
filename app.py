@@ -315,23 +315,18 @@ def home():
         total_songs=total_songs
     )
 
-@app.route('/api/recognize_live_stream', methods=['GET']) # Changed to GET
+@app.route('/api/recognize_live_stream', methods=['GET'])
 def recognize_live_stream():
-    # Use args.get for URL parameters (e.g., ?stream_url=...)
     stream_url = request.args.get('stream_url')
-    
     if not stream_url:
-        return "Error: Please provide a stream_url in the link. Example: ?stream_url=URL_HERE", 400
+        return "Error: Missing stream_url parameter", 400
 
     record_dir = os.path.join(os.getcwd(), 'recordings')
     os.makedirs(record_dir, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    filename = f"live_record_{timestamp}.mp3"
-    file_path = os.path.join(record_dir, filename)
+    file_path = os.path.join(record_dir, f"temp_{int(time.time())}.mp3")
 
     try:
-        # Record for 5 seconds
+        # 1. Record 5 seconds
         response = requests.get(stream_url, stream=True, timeout=10)
         start_time = time.time()
         with open(file_path, 'wb') as f:
@@ -340,25 +335,34 @@ def recognize_live_stream():
                 if time.time() - start_time > 5:
                     break
         
-        # Recognize using your existing fingerprint instance
-        results = fingerprint.recognize_file(file_path)
+        # 2. Recognize
+        raw_results = fingerprint.recognize_file(file_path)
 
-        # Clean up
+        # 3. FIX: Convert bytes to strings for JSON serialization
+        # Dejavu results usually contain a list of matches in raw_results['results']
+        if isinstance(raw_results, dict):
+            for result in raw_results.get('results', []):
+                for key, value in result.items():
+                    if isinstance(value, bytes):
+                        result[key] = value.decode('utf-8')
+            # Also check the top level for bytes (like file_sha1)
+            for key, value in raw_results.items():
+                if isinstance(value, bytes):
+                    raw_results[key] = value.decode('utf-8')
+
+        # 4. Clean up file
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        # Return as JSON so it's readable in the browser window
         return jsonify({
             "status": "success",
-            "stream_processed": stream_url,
-            "match_results": results
+            "results": raw_results
         })
 
     except Exception as e:
         if os.path.exists(file_path):
             os.remove(file_path)
-        return f"An error occurred: {str(e)}", 500
-
+        return f"Recognition failed: {str(e)}", 500
 @app.route('/upload-youtube', methods=['POST'])
 def upload_youtube():
     if not session.get('logged_in'):
