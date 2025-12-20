@@ -173,7 +173,7 @@ class MultiStreamRecorder:
                     self.log_audio_played(song_id, url)
                 else:
                     print(f"[Recorder] ❌ No match for stream: {url}")
-                    self.log_audio_played(song_id, url)
+                    #self.log_audio_played(song_id, url)
                 # --------------------------
 
             else:
