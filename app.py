@@ -11,6 +11,7 @@ from fingerprint_engine import FingerprintEngine
 from radio_manager import RadioManager
 from user_tracker import UserTracker
 from youtube_downloader import download_youtube_as_mp3
+from pydub import AudioSegment
 import requests
 import time
 import numpy as np
@@ -339,66 +340,72 @@ def recognize_live_stream():
 
     record_dir = os.path.join(os.getcwd(), 'recordings')
     os.makedirs(record_dir, exist_ok=True)
-    file_path = os.path.join(record_dir, f"temp_{int(time.time())}.mp3")
+    
+    timestamp = int(time.time())
+    mp3_path = os.path.join(record_dir, f"temp_{timestamp}.mp3")
+    wav_path = os.path.join(record_dir, f"temp_{timestamp}.wav")
 
     try:
-        # 1. Record 10 seconds
-        response = requests.get(stream_url, stream=True, timeout=25)
+        # 1. Record 10 seconds of stream
+        response = requests.get(stream_url, stream=True, timeout=15)
         start_time = time.time()
-        with open(file_path, 'wb') as f:
-            for block in response.iter_content(1024):
+        with open(mp3_path, 'wb') as f:
+            for block in response.iter_content(4096):
                 f.write(block)
-                if time.time() - start_time > 20:
+                if time.time() - start_time > 10:
                     break
         
-        # 2. Recognize
-        raw_results = fingerprint.recognize_file(file_path)
+        # 2. Decode MP3 to WAV
+        # This ensures the fingerprint engine works with raw linear PCM data
+        audio = AudioSegment.from_file(mp3_path)
+        audio.export(wav_path, format="wav")
+        print(f"[RECOGNIZE] Converted to WAV: {wav_path}")
 
-        # 3. Clean up the file
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-        # 4. JSON Serializable Fix
+        # 3. Recognize the WAV file
+        raw_results = fingerprint.recognize_file(wav_path)
         clean_results = json_serializable(raw_results)
 
-        # 5. MATCH LOGIC
-        # 2. Match Logic with Threshold
-        # Confidence is usually found in results[0]['input_confidence'] or 'fingerprinted_hashes_in_db'
+        # 4. Cleanup both temporary files
+        for p in [mp3_path, wav_path]:
+            if os.path.exists(p):
+                os.remove(p)
+
+        # 5. Advanced Matching Logic
         matches = clean_results.get('results', [])
-        
-        # We define a "True Match" as having results AND high confidence
-        # A value of 20-30 is usually a safe "low" threshold. 
-        # Increase to 50+ for "Exact Match Only"
-        CONFIDENCE_THRESHOLD = 30 
-        
         is_exact_match = False
-        message = "MATCH NOT FOUND: No exact record matches this audio."
+        message = "MATCH NOT FOUND"
 
         if matches:
             top_match = matches[0]
-            # Dejavu usually returns 'input_confidence' or 'hashes_matched_in_input'
-            confidence = top_match.get('input_confidence', 0)
             
-            if confidence >= CONFIDENCE_THRESHOLD:
+            # Extract metrics
+            # 'hashes_matched_in_input' is the raw count of matching fingerprints
+            hashes = top_match.get('hashes_matched_in_input', 0)
+            confidence = top_match.get('input_confidence', 0)
+            song_name = top_match.get('song_name', 'Unknown')
+
+            # Your Custom Rule: if hashes >= 50 and confidence >= 8
+            if hashes >= 50 and confidence >= 8:
                 is_exact_match = True
-                song_name = top_match.get('song_name', 'Unknown')
-                message = f"MATCH FOUND: Exact match for '{song_name}' (Confidence: {confidence})"
+                message = f"MATCH FOUND: '{song_name}' (Hashes: {hashes}, Conf: {confidence})"
             else:
-                message = f"MATCH REJECTED: Found {top_match.get('song_name')} but confidence too low ({confidence})."
+                message = f"MATCH REJECTED: Metrics too low (Hashes: {hashes}/50, Conf: {confidence}/8)"
 
         return jsonify({
             "status": "success",
             "match_found": is_exact_match,
             "message": message,
+            "metrics": {
+                "hashes": hashes if matches else 0,
+                "confidence": confidence if matches else 0
+            },
             "details": clean_results
         })
 
     except Exception as e:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        for p in [mp3_path, wav_path]:
+            if os.path.exists(p): os.remove(p)
         return f"Recognition failed: {str(e)}", 500
-
-
         
 @app.route('/upload-youtube', methods=['POST'])
 def upload_youtube():
