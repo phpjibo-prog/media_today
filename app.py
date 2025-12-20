@@ -343,12 +343,12 @@ def recognize_live_stream():
 
     try:
         # 1. Record 10 seconds
-        response = requests.get(stream_url, stream=True, timeout=15)
+        response = requests.get(stream_url, stream=True, timeout=25)
         start_time = time.time()
         with open(file_path, 'wb') as f:
             for block in response.iter_content(1024):
                 f.write(block)
-                if time.time() - start_time > 10:
+                if time.time() - start_time > 20:
                     break
         
         # 2. Recognize
