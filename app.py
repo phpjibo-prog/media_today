@@ -11,6 +11,8 @@ from fingerprint_engine import FingerprintEngine
 from radio_manager import RadioManager
 from user_tracker import UserTracker
 from youtube_downloader import download_youtube_as_mp3
+import requests
+import time
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
