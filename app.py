@@ -16,6 +16,7 @@ import requests
 import time
 import numpy as np
 from flask import send_from_directory
+import json
 
 # Initialize fingerprint system once when the app starts
 fingerprint = FingerprintEngine(
@@ -342,13 +343,16 @@ def recognize_live_stream():
     if not stream_url:
         return "Error: Missing stream_url parameter", 400
 
+    record_dir = 'static/recordings'
+    os.makedirs(record_dir, exist_ok=True)
+    
     timestamp = int(time.time())
-    mp3_path = os.path.join(VERIFY_FOLDER, f"temp_{timestamp}.mp3")
+    mp3_path = os.path.join(record_dir, f"temp_{timestamp}.mp3")
     wav_filename = f"verify_{timestamp}.wav"
-    wav_path = os.path.join(VERIFY_FOLDER, wav_filename)
+    wav_path = os.path.join(record_dir, wav_filename)
 
     try:
-        # Record 10 seconds
+        # 1. Record 10 seconds
         response = requests.get(stream_url, stream=True, timeout=15)
         start_time = time.time()
         with open(mp3_path, 'wb') as f:
@@ -357,56 +361,66 @@ def recognize_live_stream():
                 if time.time() - start_time > 10:
                     break
         
-        # Decode to WAV for recognition
+        # 2. Decode to WAV for high-accuracy fingerprinting
         audio = AudioSegment.from_file(mp3_path)
         audio.export(wav_path, format="wav")
         
-        # Clean up the intermediate MP3, but KEEP the WAV
         if os.path.exists(mp3_path):
             os.remove(mp3_path)
 
-        # Recognize
+        # 3. Recognize using the WAV file
         raw_results = fingerprint.recognize_file(wav_path)
         clean_results = json_serializable(raw_results)
 
+        # 4. Apply your specific logic: Hashes >= 50 AND Confidence >= 8
         matches = clean_results.get('results', [])
-        hashes = matches[0].get('hashes_matched_in_input', 0) if matches else 0
-        conf = matches[0].get('input_confidence', 0) if matches else 0
-        song = matches[0].get('song_name', 'Unknown') if matches else "No Match"
+        is_exact_match = False
+        hashes = 0
+        conf = 0
+        song_name = "No Match"
 
-        # Determine status
-        is_match = hashes >= 50 and conf >= 8
-        status_msg = f"MATCH FOUND: {song}" if is_match else "MATCH REJECTED / NOT FOUND"
+        if matches:
+            top_match = matches[0]
+            hashes = top_match.get('hashes_matched_in_input', 0)
+            conf = top_match.get('input_confidence', 0)
+            
+            if hashes >= 50 and conf >= 8:
+                is_exact_match = True
+                song_name = top_match.get('song_name', 'Unknown')
 
-        # Return HTML for manual verification
+        status_msg = f"MATCH FOUND: {song_name}" if is_exact_match else "MATCH REJECTED / NOT FOUND"
+
+        # 5. Return HTML Verification Page
         return f"""
         <html>
-            <body style="font-family: sans-serif; padding: 20px;">
-                <h2>Stream Verification Tool</h2>
-                <div style="background: #f4f4f4; padding: 15px; border-radius: 8px;">
-                    <p><strong>Status:</strong> {status_msg}</p>
-                    <p><strong>Hashes:</strong> {hashes} | <strong>Confidence:</strong> {conf}</p>
+            <body style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
+                <h2>Live Stream Recognition Dashboard</h2>
+                <div style="background: #fdfdfd; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <h3 style="color: {'#28a745' if is_exact_match else '#dc3545'};">{status_msg}</h3>
+                    <p><strong>Metrics:</strong> {hashes} Hashes (Target: 50) | {conf} Confidence (Target: 8)</p>
                     
-                    <h4>Listen to the recording:</h4>
-                    <audio controls src="/static/recordings/{wav_filename}"></audio>
+                    <h4>Verification Player:</h4>
+                    <p style="font-size: 0.9em; color: #666;">Listen to exactly what the system heard:</p>
+                    <audio controls src="/static/recordings/{wav_filename}" style="width: 100%;"></audio>
                     
-                    <div style="margin-top: 20px;">
+                    <div style="margin-top: 30px;">
                         <a href="/api/delete_recording?file={wav_filename}" 
-                           style="background: #ff4444; color: white; padding: 10px; text-decoration: none; border-radius: 5px;">
-                           Delete this file
+                           style="background: #ff4444; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                           DELETE RECORDING
                         </a>
-                        <a href="{request.full_path}" style="margin-left: 10px;">Record Again</a>
+                        <a href="{request.full_path}" style="margin-left: 15px; color: #007bff;">Try Again</a>
                     </div>
                 </div>
-                <hr>
-                <pre>{json.dumps(clean_results, indent=2)}</pre>
+                <hr style="margin-top: 40px;">
+                <h4>Raw Engine Output:</h4>
+                <pre style="background: #222; color: #0f0; padding: 15px; overflow: auto; border-radius: 5px;">{json.dumps(clean_results, indent=2)}</pre>
             </body>
         </html>
         """
 
     except Exception as e:
-        return f"Error: {str(e)}", 500
-
+        return f"Recognition failed: {str(e)}", 500
+        
 # 2. Add a route to manually delete the file
 @app.route('/api/delete_recording')
 def delete_recording():
