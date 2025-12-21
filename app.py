@@ -8,7 +8,7 @@ import re
 app = Flask(__name__)
 
 def sanitize_filename(name):
-    """Removes characters that aren't allowed in filenames."""
+    """Remove invalid filename characters."""
     return re.sub(r'[\\/*?:"<>|]', "", name)
 
 @app.route('/')
@@ -33,10 +33,11 @@ def get_info():
 def download():
     data = request.json
     url = data.get('url')
-    f_type = data.get('format')
+    f_type = data.get('format')  # 'mp3' or 'mp4'
     quality = data.get('quality')
 
-    tmp_dir = tempfile.mkdtemp(prefix="ytdlp_")
+    # Use Railway-friendly /tmp for temp files
+    tmp_dir = tempfile.mkdtemp(dir='/tmp', prefix='yt_')
 
     try:
         ydl_opts = {
@@ -44,19 +45,19 @@ def download():
             'socket_timeout': 30,
             'continuedl': True,
             'quiet': True,
-            'outtmpl': os.path.join(tmp_dir, '%(title)s.%(ext)s'),
+            'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
             'noplaylist': True,
-            'http_chunk_size': 10485760,
+            'http_chunk_size': 10485760,  # 10MB chunks
         }
 
         if f_type == 'mp3':
             ydl_opts.update({
-                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                              'AppleWebKit/537.36 (KHTML, like Gecko) '
-                              'Chrome/120.0.0.0 Safari/537.36',
-                'referer': 'https://www.youtube.com/',
-                'nocheckcertificate': True,
-                'extractor_retries': 5,
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': quality,
+                }],
             })
         else:
             ydl_opts.update({
@@ -66,41 +67,37 @@ def download():
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-
-            # Get final file path (important for MP3)
-            if 'requested_downloads' in info:
-                downloaded_path = info['requested_downloads'][0]['filepath']
-            else:
-                downloaded_path = ydl.prepare_filename(info)
+            downloaded_path = ydl.prepare_filename(info)
 
             if f_type == 'mp3':
                 downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
 
-            filename = os.path.basename(downloaded_path)
+            video_title = os.path.basename(downloaded_path)
 
+        # Send file and delete temp folder immediately after
         response = send_file(
             downloaded_path,
             as_attachment=True,
-            download_name=filename,
-            mimetype='application/octet-stream',
-            conditional=False
+            download_name=video_title,
+            mimetype='application/octet-stream'
         )
-        @response.call_on_close
-        def cleanup():
+        # Cleanup temp folder after response
+        def remove_temp_folder(response):
             try:
-                if os.path.exists(downloaded_path):
-                    os.remove(downloaded_path)
                 if os.path.exists(tmp_dir):
                     shutil.rmtree(tmp_dir, ignore_errors=True)
             except Exception as e:
-                app.logger.warning(f"Cleanup warning: {e}")
-        
+                app.logger.error(f"Temp cleanup failed: {e}")
+            return response
+
+        response.call_on_close(remove_temp_folder)
         return response
 
     except Exception as e:
+        # Ensure cleanup on error
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir, ignore_errors=True)
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
