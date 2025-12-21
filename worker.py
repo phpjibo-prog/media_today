@@ -3,12 +3,11 @@ import yt_dlp
 import shutil
 import tempfile
 from redis import Redis
-from rq import Worker, Queue, Connection
+from rq import Worker, Queue
 
 # Connect to Railway's Redis instance
-# Railway provides REDIS_URL automatically when you add a Redis plugin
 redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-conn = Redis.from_url(redis_url)
+redis_conn = Redis.from_url(redis_url)
 
 def download_task(url, f_type, quality):
     """The function that actually does the downloading"""
@@ -45,8 +44,6 @@ def download_task(url, f_type, quality):
                 file_path = os.path.splitext(file_path)[0] + '.mp3'
             
             print(f"Success: {file_path}")
-            # Note: In a full worker setup, you would upload this to 
-            # S3/Cloudinary and return the link, as the worker's disk is temporary.
             return file_path
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -55,6 +52,7 @@ def download_task(url, f_type, quality):
         return None
 
 if __name__ == '__main__':
-    with Connection(conn):
-        worker = Worker(list(map(Queue, ['default'])))
-        worker.work()
+    # Updated: Pass the connection directly to the Worker
+    queue = Queue('default', connection=redis_conn)
+    worker = Worker([queue], connection=redis_conn)
+    worker.work()
