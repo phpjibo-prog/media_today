@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file, after_this_request
+from flask import Flask, render_template, request, jsonify, send_file
 import yt_dlp
 import os
 import tempfile
@@ -78,8 +78,15 @@ def download():
 
             filename = os.path.basename(downloaded_path)
 
-        @after_this_request
-        def cleanup(response):
+        response = send_file(
+            downloaded_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/octet-stream',
+            conditional=False
+        )
+        @response.call_on_close
+        def cleanup():
             try:
                 if os.path.exists(downloaded_path):
                     os.remove(downloaded_path)
@@ -87,14 +94,8 @@ def download():
                     shutil.rmtree(tmp_dir, ignore_errors=True)
             except Exception as e:
                 app.logger.warning(f"Cleanup warning: {e}")
-            return response
-
-        return send_file(
-            downloaded_path,
-            as_attachment=True,
-            download_name=filename,
-            mimetype='application/octet-stream'
-        )
+        
+        return response
 
     except Exception as e:
         if os.path.exists(tmp_dir):
