@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify, send_file, after_this_request
+from flask import Flask, render_template, request, jsonify, Response
+from werkzeug.wsgi import FileWrapper
 import yt_dlp
 import os
 import tempfile
@@ -13,6 +14,7 @@ def sanitize_filename(name):
 
 @app.route('/')
 def index():
+    # This renders your index.html file
     return render_template('index.html')
 
 @app.route('/get_info', methods=['POST'])
@@ -40,13 +42,9 @@ def download():
     
     try:
         ydl_opts = {
-            'retries': 10,
-            'socket_timeout': 30,
-            'continuedl': True,
-            'quiet': True,
             'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
             'noplaylist': True,
-            'http_chunk_size': 10485760, # 10MB chunks
+            'quiet': True,
         }
 
         if f_type == 'mp3':
@@ -65,37 +63,34 @@ def download():
             })
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # download=True performs the actual download to tmp_dir
             info = ydl.extract_info(url, download=True)
-            
-            # Get the expected filename from yt-dlp
             downloaded_path = ydl.prepare_filename(info)
-            
-            # Handle the extension change for MP3 post-processing
             if f_type == 'mp3':
                 downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
             
-            # Extract just the filename for the browser's save dialog
             video_title = os.path.basename(downloaded_path)
 
-        @after_this_request
-        def cleanup(response):
+        # Create a generator to stream the file and then clean up
+        def generate():
+            with open(downloaded_path, 'rb') as f:
+                yield from f  # Streams the file content
+            
+            # The code below only runs AFTER the file is fully streamed
             try:
-                # Use a small delay or check if file is closed if needed, 
-                # but rmtree usually works well here.
-                shutil.rmtree(tmp_dir)
+                if os.path.exists(tmp_dir):
+                    shutil.rmtree(tmp_dir)
+                    print(f"Cleanup successful: {tmp_dir}")
             except Exception as e:
-                app.logger.error(f"Cleanup error: {e}")
-            return response
+                print(f"Cleanup error: {e}")
 
-        return send_file(
-            downloaded_path,
-            as_attachment=True,
-            download_name=video_title,
-            mimetype='application/octet-stream'
+        return Response(
+            generate(),
+            mimetype='application/octet-stream',
+            headers={"Content-Disposition": f"attachment; filename=\"{video_title}\""}
         )
 
     except Exception as e:
+        # If something fails BEFORE the generator starts, clean up here
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir)
         return jsonify({'error': str(e)}), 400
