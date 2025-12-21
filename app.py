@@ -1,17 +1,22 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file, after_this_request
 import yt_dlp
 import os
+import tempfile
+import shutil
+import re
 
 app = Flask(__name__)
 
-# Configure download options
-def get_ydl_opts(format_type, quality):
+# Helper to generate options
+def get_ydl_opts(tmp_dir, format_type, quality):
     opts = {
         'retries': 10,
         'socket_timeout': 30,
         'continuedl': True,
         'quiet': True,
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
+        'noplaylist': True,
+        'http_chunk_size': 10485760, 
     }
 
     if format_type == 'mp3':
@@ -20,16 +25,14 @@ def get_ydl_opts(format_type, quality):
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
-                'preferredquality': quality, # '320' or '128'
+                'preferredquality': quality,
             }],
         })
     else:
-        # For video, we target specific height and ensure mp4 container
         opts.update({
             'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]',
             'merge_output_format': 'mp4',
         })
-    
     return opts
 
 @app.route('/')
@@ -50,24 +53,50 @@ def get_info():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-# Note: In a production app, you'd stream the file back to the user.
-# For this demo, we handle the logic for selecting the right format.
 @app.route('/download', methods=['POST'])
 def download():
     data = request.json
     url = data.get('url')
-    f_type = data.get('format') # 'mp3' or 'mp4'
+    f_type = data.get('format')
     quality = data.get('quality')
 
+    tmp_dir = tempfile.mkdtemp()
+    
     try:
-        opts = get_ydl_opts(f_type, quality)
+        opts = get_ydl_opts(tmp_dir, f_type, quality)
+        
         with yt_dlp.YoutubeDL(opts) as ydl:
-            ydl.download([url])
-        return jsonify({'message': 'Download started on server!'})
+            # 1. Download the file
+            info = ydl.extract_info(url, download=True)
+            
+            # 2. Get the correct file path
+            downloaded_path = ydl.prepare_filename(info)
+            
+            # 3. Correct extension for MP3
+            if f_type == 'mp3':
+                downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
+            
+            # 4. Extract the actual file name for the browser
+            actual_filename = os.path.basename(downloaded_path)
+
+        @after_this_request
+        def cleanup(response):
+            try:
+                shutil.rmtree(tmp_dir)
+            except Exception as e:
+                print(f"Cleanup error: {e}")
+            return response
+
+        return send_file(
+            downloaded_path,
+            as_attachment=True,
+            download_name=actual_filename
+        )
+
     except Exception as e:
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    if not os.path.exists('downloads'):
-        os.makedirs('downloads')
     app.run(debug=True)
