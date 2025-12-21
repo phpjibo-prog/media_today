@@ -8,3 +8,4 @@ matplotlib
 mysql-connector-python
 psycopg2
 yt-dlp>=2023.11.16
+requests
