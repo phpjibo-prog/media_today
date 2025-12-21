@@ -69,7 +69,13 @@ def download():
             info = ydl.extract_info(url, download=True)
             
             # Get the expected filename from yt-dlp
-            downloaded_path = ydl.prepare_filename(info)
+            if 'requested_downloads' in info:
+                downloaded_path = info['requested_downloads'][0]['filepath']
+            else:
+                downloaded_path = ydl.prepare_filename(info)
+
+if f_type == 'mp3':
+    downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
             
             # Handle the extension change for MP3 post-processing
             if f_type == 'mp3':
@@ -81,11 +87,12 @@ def download():
         @after_this_request
         def cleanup(response):
             try:
-                # Use a small delay or check if file is closed if needed, 
-                # but rmtree usually works well here.
-                shutil.rmtree(tmp_dir)
+                if os.path.exists(downloaded_path):
+                    os.remove(downloaded_path)
+                if os.path.exists(tmp_dir):
+                    shutil.rmtree(tmp_dir, ignore_errors=True)
             except Exception as e:
-                app.logger.error(f"Cleanup error: {e}")
+                app.logger.warning(f"Cleanup warning (safe to ignore): {e}")
             return response
 
         return send_file(
