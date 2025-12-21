@@ -3,7 +3,6 @@ import yt_dlp
 import os
 import tempfile
 import shutil
-import re
 
 app = Flask(__name__)
 
@@ -11,9 +10,10 @@ app = Flask(__name__)
 def get_ydl_opts(tmp_dir, format_type, quality):
     opts = {
         'retries': 10,
-        'socket_timeout': 30,
+        'socket_timeout': 60, # Increased for cloud
         'continuedl': True,
         'quiet': True,
+        # Use /tmp as it's the most reliable writeable path on Railway
         'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
         'noplaylist': True,
         'http_chunk_size': 10485760, 
@@ -30,6 +30,7 @@ def get_ydl_opts(tmp_dir, format_type, quality):
         })
     else:
         opts.update({
+            # Best mp4 available under/at quality
             'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]',
             'merge_output_format': 'mp4',
         })
@@ -39,20 +40,6 @@ def get_ydl_opts(tmp_dir, format_type, quality):
 def index():
     return render_template('index.html')
 
-@app.route('/get_info', methods=['POST'])
-def get_info():
-    url = request.json.get('url')
-    try:
-        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
-            info = ydl.extract_info(url, download=False)
-            return jsonify({
-                'title': info.get('title'),
-                'thumbnail': info.get('thumbnail'),
-                'duration': info.get('duration_string')
-            })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
 @app.route('/download', methods=['POST'])
 def download():
     data = request.json
@@ -60,32 +47,31 @@ def download():
     f_type = data.get('format')
     quality = data.get('quality')
 
-    tmp_dir = tempfile.mkdtemp()
+    # Force the temporary directory to be inside /tmp for Linux/Railway compatibility
+    tmp_dir = tempfile.mkdtemp(dir="/tmp")
     
     try:
         opts = get_ydl_opts(tmp_dir, f_type, quality)
         
         with yt_dlp.YoutubeDL(opts) as ydl:
-            # 1. Download the file
             info = ydl.extract_info(url, download=True)
-            
-            # 2. Get the correct file path
             downloaded_path = ydl.prepare_filename(info)
             
-            # 3. Correct extension for MP3
             if f_type == 'mp3':
                 downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
             
-            # 4. Extract the actual file name for the browser
             actual_filename = os.path.basename(downloaded_path)
 
-        @after_this_request
-        def cleanup(response):
+        # IMPORTANT: send_file can fail if the file is deleted before it finishes streaming.
+        # We use a response generator to ensure cleanup happens AFTER the download.
+        def generate():
+            with open(downloaded_path, 'rb') as f:
+                yield from f
+            # Cleanup once the generator is exhausted
             try:
                 shutil.rmtree(tmp_dir)
-            except Exception as e:
-                print(f"Cleanup error: {e}")
-            return response
+            except:
+                pass
 
         return send_file(
             downloaded_path,
@@ -99,4 +85,6 @@ def download():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Railway provides a PORT environment variable
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
