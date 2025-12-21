@@ -62,14 +62,15 @@ def download():
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': quality,
+                    'preferredquality': str(quality),
                 }],
             })
         else:
             ydl_opts.update({
-                'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]',
+                'format': f'bestvideo[height<={quality}]+bestaudio/best',
                 'merge_output_format': 'mp4',
             })
+
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
