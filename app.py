@@ -1,21 +1,21 @@
-from flask import Flask, render_template, request, jsonify, send_file, after_this_request
+from flask import Flask, render_template, request, jsonify, send_file, Response, stream_with_context
 import yt_dlp
 import os
 import tempfile
 import shutil
-import re
+import time
 
 app = Flask(__name__)
 
 def get_ydl_opts(tmp_dir, format_type, quality):
     opts = {
         'retries': 10,
-        'socket_timeout': 60,
+        'socket_timeout': 60, # Increased for cloud stability
         'continuedl': True,
         'quiet': True,
         'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
         'noplaylist': True,
-        'http_chunk_size': 10485760, 
+        'http_chunk_size': 10485760, # 10MB chunks
     }
 
     if format_type == 'mp3':
@@ -28,6 +28,7 @@ def get_ydl_opts(tmp_dir, format_type, quality):
             }],
         })
     else:
+        # Ensures mp4 compatibility and matches requested height
         opts.update({
             'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]',
             'merge_output_format': 'mp4',
@@ -40,13 +41,11 @@ def index():
 
 @app.route('/get_info', methods=['POST'])
 def get_info():
-    # FIXED: Define 'data' by getting the JSON from the request
     data = request.json
     url = data.get('url')
-    
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
-
+        
     try:
         with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -60,13 +59,12 @@ def get_info():
 
 @app.route('/download', methods=['POST'])
 def download():
-    # FIXED: Define 'data' here as well
     data = request.json
     url = data.get('url')
     f_type = data.get('format')
     quality = data.get('quality')
 
-    # Use /tmp for Railway compatibility
+    # Railway specific: Use /tmp for writeable storage
     tmp_dir = tempfile.mkdtemp(dir="/tmp")
     
     try:
@@ -81,20 +79,22 @@ def download():
             
             actual_filename = os.path.basename(downloaded_path)
 
-        @after_this_request
-        def cleanup(response):
+        # Stream the file and clean up immediately after
+        def generate():
+            with open(downloaded_path, 'rb') as f:
+                yield from f
+            # Cleanup once the user has received the data
             try:
-                if os.path.exists(tmp_dir):
-                    shutil.rmtree(tmp_dir)
-            except Exception as e:
-                app.logger.error(f"Cleanup error: {e}")
-            return response
+                shutil.rmtree(tmp_dir)
+            except:
+                pass
 
-        return send_file(
-            downloaded_path,
-            as_attachment=True,
-            download_name=actual_filename,
-            mimetype='application/octet-stream'
+        return Response(
+            stream_with_context(generate()),
+            headers={
+                "Content-Disposition": f"attachment; filename={actual_filename}",
+                "Content-Type": "application/octet-stream"
+            }
         )
 
     except Exception as e:
@@ -103,6 +103,6 @@ def download():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    # Railway environment support
+    # Required for Railway to bind to the correct port
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
