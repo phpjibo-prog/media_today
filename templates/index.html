@@ -1,22 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreamFetch | Pro Downloader</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-6">
 
     <div class="max-w-2xl w-full bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
-        <h1 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent">
+        <h1
+            class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent">
             YouTube Downloader
         </h1>
 
         <div class="flex gap-2 mb-8">
-            <input type="text" id="urlInput" placeholder="Paste YouTube link here..." 
+            <input type="text" id="urlInput" placeholder="Paste YouTube link here..."
                 class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 transition">
-            <button onclick="fetchVideoInfo()" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-semibold transition">
+            <button onclick="fetchVideoInfo()"
+                class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-semibold transition">
                 Analyze
             </button>
         </div>
@@ -33,16 +37,22 @@
             <div class="grid grid-cols-2 gap-4 mt-6">
                 <div>
                     <h4 class="text-xs font-bold uppercase text-gray-500 mb-2">Audio (MP3)</h4>
-                    <button onclick="download('mp3', '320')" class="w-full mb-2 bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded">320kbps</button>
-                    <button onclick="download('mp3', '128')" class="w-full bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded">128kbps</button>
+                    <button onclick="download('mp3', '320')"
+                        class="w-full mb-2 bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded">320kbps</button>
+                    <button onclick="download('mp3', '128')"
+                        class="w-full bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded">128kbps</button>
                 </div>
                 <div>
                     <h4 class="text-xs font-bold uppercase text-gray-500 mb-2">Video (MP4)</h4>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="download('mp4', '1080')" class="bg-blue-600 hover:bg-blue-700 text-xs py-2 rounded">1080p</button>
-                        <button onclick="download('mp4', '720')" class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">720p</button>
-                        <button onclick="download('mp4', '480')" class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">480p</button>
-                        <button onclick="download('mp4', '360')" class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">360p</button>
+                        <button onclick="download('mp4', '1080')"
+                            class="bg-blue-600 hover:bg-blue-700 text-xs py-2 rounded">1080p</button>
+                        <button onclick="download('mp4', '720')"
+                            class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">720p</button>
+                        <button onclick="download('mp4', '480')"
+                            class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">480p</button>
+                        <button onclick="download('mp4', '360')"
+                            class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">360p</button>
                     </div>
                 </div>
             </div>
@@ -56,11 +66,11 @@
             const url = document.getElementById('urlInput').value;
             const status = document.getElementById('status');
             status.innerText = "Analyzing video...";
-            
+
             const response = await fetch('/get_info', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({url})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
             });
             const data = await response.json();
 
@@ -76,41 +86,42 @@
         }
 
         async function download(format, quality) {
-        const url = document.getElementById('urlInput').value;
-        const status = document.getElementById('status');
-        status.innerText = `🔄 Preparing your ${quality} ${format}... Please wait.`;
-    
-        try {
-            const response = await fetch('/download', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({url, format, quality})
-            });
-    
-            if (!response.ok) throw new Error('Download failed');
-    
-            // Convert response to a blob (the actual file)
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            
-            // Create a hidden link and click it to trigger the browser download
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            
-            // Try to get filename from headers or default to "download"
-            a.download = format === 'mp3' ? `audio_${quality}k.mp3` : `video_${quality}p.mp4`;
-            document.body.appendChild(a);
-            a.click();
-            
-            // Cleanup
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(downloadUrl);
-            status.innerText = "✅ Download started!";
-            
-        } catch (err) {
-            status.innerText = "❌ Error: " + err.message;
+            const url = document.getElementById('urlInput').value;
+            const status = document.getElementById('status');
+            status.innerText = `🔄 Preparing your ${quality} ${format}... Please wait.`;
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, format, quality })
+                });
+
+                if (!response.ok) throw new Error('Download failed');
+
+                // Convert response to a blob (the actual file)
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+
+                // Create a hidden link and click it to trigger the browser download
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+
+                // Try to get filename from headers or default to "download"
+                a.download = format === 'mp3' ? `audio_${quality}k.mp3` : `video_${quality}p.mp4`;
+                document.body.appendChild(a);
+                a.click();
+
+                // Cleanup
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+                status.innerText = "✅ Download started!";
+
+            } catch (err) {
+                status.innerText = "❌ Error: " + err.message;
+            }
         }
-    } 
     </script>
 </body>
+
 </html>
