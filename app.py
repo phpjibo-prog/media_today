@@ -70,40 +70,39 @@ def download():
             
             video_title = os.path.basename(downloaded_path)
 
-        # Create a generator to stream the file and then clean up
-        # Create a generator to stream the file and then clean up
+        # 1. Create a generator to stream the file safely
         def generate():
             try:
                 with open(downloaded_path, 'rb') as f:
-                    # Python 3.7 compatible chunk reading
+                    # Compatibility-friendly chunked reading
                     while True:
                         chunk = f.read(8192)
                         if not chunk:
                             break
                         yield chunk
             finally:
-                # This 'finally' block ensures cleanup even if the user cancels the download
+                # 2. Finally block ensures cleanup happens AFTER streaming finishes
                 try:
                     if os.path.exists(tmp_dir):
                         shutil.rmtree(tmp_dir)
-                        print(f"Railway Cleanup successful: {tmp_dir}")
-                except Exception as cleanup_err:
-                    print(f"Cleanup error: {cleanup_err}")
+                        print(f"Cleanup successful: {tmp_dir}")
+                except Exception as e:
+                    app.logger.error(f"Cleanup error: {e}")
 
+        # 3. Return a Response with appropriate headers
         return Response(
             generate(),
             mimetype='application/octet-stream',
             headers={
                 "Content-Disposition": f"attachment; filename=\"{video_title}\"",
-                "Content-Length": os.path.getsize(downloaded_path) # Helps the browser show a progress bar
+                "Content-Length": os.path.getsize(downloaded_path) # Helps browser progress bars
             }
         )
 
     except Exception as e:
-        # If something fails BEFORE the generator starts, clean up here
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir)
         return jsonify({'error': str(e)}), 400
-
+        
 if __name__ == '__main__':
     app.run(debug=True)
