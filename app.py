@@ -71,11 +71,15 @@ def download():
             video_title = os.path.basename(downloaded_path)
 
         # Create a generator to stream the file and then clean up
+        # Create a generator to stream the file and then clean up
         def generate():
             try:
                 with open(downloaded_path, 'rb') as f:
-                    # Use a chunk size for better memory management on Railway
-                    while chunk := f.read(8192):
+                    # Python 3.7 compatible chunk reading
+                    while True:
+                        chunk = f.read(8192)
+                        if not chunk:
+                            break
                         yield chunk
             finally:
                 # This 'finally' block ensures cleanup even if the user cancels the download
