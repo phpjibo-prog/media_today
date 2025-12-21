@@ -6,10 +6,14 @@ from redis import Redis
 from rq import Worker, Queue
 
 # Connect to Railway's Redis instance
+# The linkage in Step 1 provides this variable automatically
 redis_url = os.environ.get('REDIS_URL')
+
 if not redis_url:
-    print("WARNING: REDIS_URL not found in environment. Falling back to localhost.")
-    redis_url = 'redis://localhost:6379'
+    # This will show up clearly in your Railway logs if the link is missing
+    raise ValueError("CRITICAL ERROR: REDIS_URL not found. Check Railway service variables.")
+
+print(f"Worker connecting to Redis at: {redis_url}")
 redis_conn = Redis.from_url(redis_url)
 
 def download_task(url, f_type, quality):
@@ -55,7 +59,7 @@ def download_task(url, f_type, quality):
         return None
 
 if __name__ == '__main__':
-    # Updated: Pass the connection directly to the Worker
+    # Queue 'default' must match the queue used in app.py
     queue = Queue('default', connection=redis_conn)
     worker = Worker([queue], connection=redis_conn)
     worker.work()
