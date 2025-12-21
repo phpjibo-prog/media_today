@@ -85,42 +85,20 @@
             }
         }
 
-        async function download(format, quality) {
-            const url = document.getElementById('urlInput').value;
+        function download(format, quality) {
             const status = document.getElementById('status');
-            status.innerText = `🔄 Preparing your ${quality} ${format}... Please wait.`;
-
-            try {
-                const response = await fetch('/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, format, quality })
-                });
-
-                if (!response.ok) throw new Error('Download failed');
-
-                // Convert response to a blob (the actual file)
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-
-                // Create a hidden link and click it to trigger the browser download
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-
-                // Try to get filename from headers or default to "download"
-                a.download = format === 'mp3' ? `audio_${quality}k.mp3` : `video_${quality}p.mp4`;
-                document.body.appendChild(a);
-                a.click();
-
-                // Cleanup
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(downloadUrl);
-                status.innerText = "✅ Download started!";
-
-            } catch (err) {
-                status.innerText = "❌ Error: " + err.message;
-            }
+        
+            status.innerText = `🔄 Preparing your ${quality} ${format}...`;
+        
+            document.getElementById('d_url').value =
+                document.getElementById('urlInput').value;
+        
+            document.getElementById('d_format').value = format;
+            document.getElementById('d_quality').value = quality;
+        
+            document.getElementById('downloadForm').submit();
         }
+
     </script>
 </body>
 
