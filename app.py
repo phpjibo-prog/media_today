@@ -39,10 +39,13 @@ def download():
     quality = data.get('quality')
 
     tmp_dir = tempfile.mkdtemp()
+    # Force a simple filename to avoid [Errno 2] issues
+    simple_name = "download_file" 
     
     try:
         ydl_opts = {
-            'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
+            # We fix the filename here so we don't have to guess it later
+            'outtmpl': f'{tmp_dir}/{simple_name}.%(ext)s',
             'noplaylist': True,
             'quiet': True,
         }
@@ -64,38 +67,37 @@ def download():
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            downloaded_path = ydl.prepare_filename(info)
-            if f_type == 'mp3':
-                downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
+            # The actual title for the user's browser
+            original_title = info.get('title', 'download')
+            video_title = f"{sanitize_filename(original_title)}.{'mp3' if f_type == 'mp3' else 'mp4'}"
             
-            video_title = os.path.basename(downloaded_path)
+            # The path where the file actually sits on the server
+            downloaded_path = os.path.join(tmp_dir, f"{simple_name}.{'mp3' if f_type == 'mp3' else 'mp4'}")
 
-        # 1. Create a generator to stream the file safely
+        if not os.path.exists(downloaded_path):
+            raise FileNotFoundError(f"File not found at {downloaded_path}")
+
         def generate():
             try:
                 with open(downloaded_path, 'rb') as f:
-                    # Compatibility-friendly chunked reading
                     while True:
                         chunk = f.read(8192)
                         if not chunk:
                             break
                         yield chunk
             finally:
-                # 2. Finally block ensures cleanup happens AFTER streaming finishes
                 try:
-                    if os.path.exists(tmp_dir):
-                        shutil.rmtree(tmp_dir)
-                        print(f"Cleanup successful: {tmp_dir}")
-                except Exception as e:
-                    app.logger.error(f"Cleanup error: {e}")
+                    shutil.rmtree(tmp_dir)
+                    print(f"Cleanup successful: {tmp_dir}")
+                except:
+                    pass
 
-        # 3. Return a Response with appropriate headers
         return Response(
             generate(),
             mimetype='application/octet-stream',
             headers={
                 "Content-Disposition": f"attachment; filename=\"{video_title}\"",
-                "Content-Length": os.path.getsize(downloaded_path) # Helps browser progress bars
+                "Content-Length": os.path.getsize(downloaded_path)
             }
         )
 
