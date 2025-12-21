@@ -50,6 +50,8 @@ def download_task(url, f_type, quality):
             return file_path
     except Exception as e:
         print(f"Error: {str(e)}")
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
         return None
 
 if __name__ == '__main__':
