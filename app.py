@@ -72,21 +72,27 @@ def download():
 
         # Create a generator to stream the file and then clean up
         def generate():
-            with open(downloaded_path, 'rb') as f:
-                yield from f  # Streams the file content
-            
-            # The code below only runs AFTER the file is fully streamed
             try:
-                if os.path.exists(tmp_dir):
-                    shutil.rmtree(tmp_dir)
-                    print(f"Cleanup successful: {tmp_dir}")
-            except Exception as e:
-                print(f"Cleanup error: {e}")
+                with open(downloaded_path, 'rb') as f:
+                    # Use a chunk size for better memory management on Railway
+                    while chunk := f.read(8192):
+                        yield chunk
+            finally:
+                # This 'finally' block ensures cleanup even if the user cancels the download
+                try:
+                    if os.path.exists(tmp_dir):
+                        shutil.rmtree(tmp_dir)
+                        print(f"Railway Cleanup successful: {tmp_dir}")
+                except Exception as cleanup_err:
+                    print(f"Cleanup error: {cleanup_err}")
 
         return Response(
             generate(),
             mimetype='application/octet-stream',
-            headers={"Content-Disposition": f"attachment; filename=\"{video_title}\""}
+            headers={
+                "Content-Disposition": f"attachment; filename=\"{video_title}\"",
+                "Content-Length": os.path.getsize(downloaded_path) # Helps the browser show a progress bar
+            }
         )
 
     except Exception as e:
