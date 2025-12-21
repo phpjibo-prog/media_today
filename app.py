@@ -1,13 +1,15 @@
-from flask import Flask, render_template, request, jsonify
-from redis import Redis
-from rq import Queue
-from tasks import download_video
+from flask import Flask, render_template, request, jsonify, send_file, after_this_request
+import yt_dlp
+import os
+import tempfile
+import shutil
+import re
 
 app = Flask(__name__)
 
-# Redis connection (Railway will provide REDIS_URL)
-redis_conn = Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'))
-q = Queue(connection=redis_conn)
+def sanitize_filename(name):
+    """Removes characters that aren't allowed in filenames."""
+    return re.sub(r'[\\/*?:"<>|]', "", name)
 
 @app.route('/')
 def index():
@@ -15,10 +17,9 @@ def index():
 
 @app.route('/get_info', methods=['POST'])
 def get_info():
-    from yt_dlp import YoutubeDL
     url = request.json.get('url')
     try:
-        with YoutubeDL({'quiet': True}) as ydl:
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
             info = ydl.extract_info(url, download=False)
             return jsonify({
                 'title': info.get('title'),
@@ -35,22 +36,69 @@ def download():
     f_type = data.get('format')
     quality = data.get('quality')
 
-    # Push job to worker queue
-    job = q.enqueue(download_video, url, f_type, quality)
+    tmp_dir = tempfile.mkdtemp()
     
-    return jsonify({'job_id': job.get_id(), 'status': 'queued'})
+    try:
+        ydl_opts = {
+            'retries': 10,
+            'socket_timeout': 30,
+            'continuedl': True,
+            'quiet': True,
+            'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
+            'noplaylist': True,
+            'http_chunk_size': 10485760, # 10MB chunks
+        }
 
-@app.route('/status/<job_id>')
-def job_status(job_id):
-    from rq.job import Job
-    job = Job.fetch(job_id, connection=redis_conn)
-    if job.is_finished:
-        return jsonify({'status': 'finished', 'result': job.result})
-    elif job.is_failed:
-        return jsonify({'status': 'failed', 'error': str(job.exc_info)})
-    else:
-        return jsonify({'status': 'queued'})
+        if f_type == 'mp3':
+            ydl_opts.update({
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': quality,
+                }],
+            })
+        else:
+            ydl_opts.update({
+                'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]',
+                'merge_output_format': 'mp4',
+            })
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # download=True performs the actual download to tmp_dir
+            info = ydl.extract_info(url, download=True)
+            
+            # Get the expected filename from yt-dlp
+            downloaded_path = ydl.prepare_filename(info)
+            
+            # Handle the extension change for MP3 post-processing
+            if f_type == 'mp3':
+                downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
+            
+            # Extract just the filename for the browser's save dialog
+            video_title = os.path.basename(downloaded_path)
+
+        @after_this_request
+        def cleanup(response):
+            try:
+                # Use a small delay or check if file is closed if needed, 
+                # but rmtree usually works well here.
+                shutil.rmtree(tmp_dir)
+            except Exception as e:
+                app.logger.error(f"Cleanup error: {e}")
+            return response
+
+        return send_file(
+            downloaded_path,
+            as_attachment=True,
+            download_name=video_title,
+            mimetype='application/octet-stream'
+        )
+
+    except Exception as e:
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    import os
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True)
