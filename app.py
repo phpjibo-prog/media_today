@@ -36,17 +36,17 @@ def download():
     f_type = data.get('format')
     quality = data.get('quality')
 
-    tmp_dir = tempfile.mkdtemp()
-    
+    tmp_dir = tempfile.mkdtemp(prefix="ytdlp_")
+
     try:
         ydl_opts = {
             'retries': 10,
             'socket_timeout': 30,
             'continuedl': True,
             'quiet': True,
-            'outtmpl': f'{tmp_dir}/%(title)s.%(ext)s',
+            'outtmpl': os.path.join(tmp_dir, '%(title)s.%(ext)s'),
             'noplaylist': True,
-            'http_chunk_size': 10485760, # 10MB chunks
+            'http_chunk_size': 10485760,
         }
 
         if f_type == 'mp3':
@@ -65,24 +65,18 @@ def download():
             })
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # download=True performs the actual download to tmp_dir
             info = ydl.extract_info(url, download=True)
-            
-            # Get the expected filename from yt-dlp
+
+            # Get final file path (important for MP3)
             if 'requested_downloads' in info:
                 downloaded_path = info['requested_downloads'][0]['filepath']
             else:
                 downloaded_path = ydl.prepare_filename(info)
 
-if f_type == 'mp3':
-    downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
-            
-            # Handle the extension change for MP3 post-processing
             if f_type == 'mp3':
                 downloaded_path = os.path.splitext(downloaded_path)[0] + '.mp3'
-            
-            # Extract just the filename for the browser's save dialog
-            video_title = os.path.basename(downloaded_path)
+
+            filename = os.path.basename(downloaded_path)
 
         @after_this_request
         def cleanup(response):
@@ -92,19 +86,19 @@ if f_type == 'mp3':
                 if os.path.exists(tmp_dir):
                     shutil.rmtree(tmp_dir, ignore_errors=True)
             except Exception as e:
-                app.logger.warning(f"Cleanup warning (safe to ignore): {e}")
+                app.logger.warning(f"Cleanup warning: {e}")
             return response
 
         return send_file(
             downloaded_path,
             as_attachment=True,
-            download_name=video_title,
+            download_name=filename,
             mimetype='application/octet-stream'
         )
 
     except Exception as e:
         if os.path.exists(tmp_dir):
-            shutil.rmtree(tmp_dir)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
