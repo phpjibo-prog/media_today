@@ -97,12 +97,14 @@
                     body: JSON.stringify({ url, format, quality })
                 });
         
+                // Check if the server returned an error (e.g., timeout or conversion error)
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'Download failed');
                 }
         
                 // 1. Get the real filename from the server's Content-Disposition header
+                // This ensures the file saves with the actual YouTube video title
                 const disposition = response.headers.get('Content-Disposition');
                 let filename = format === 'mp3' ? `audio_${quality}k.mp3` : `video_${quality}p.mp4`;
                 
@@ -114,18 +116,18 @@
                     }
                 }
         
-                // 2. Process the stream as a Blob
+                // 2. Process the incoming data stream as a Blob
                 const blob = await response.blob();
                 const downloadUrl = window.URL.createObjectURL(blob);
         
-                // 3. Trigger the browser download dialog
+                // 3. Trigger the browser's download dialog
                 const a = document.createElement('a');
                 a.href = downloadUrl;
                 a.download = filename; 
                 document.body.appendChild(a);
                 a.click();
         
-                // 4. Cleanup memory
+                // 4. Cleanup to free up browser memory
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(downloadUrl);
                 status.innerText = "✅ Download complete!";
@@ -134,7 +136,7 @@
                 console.error(err);
                 status.innerText = "❌ " + err.message;
             }
-        }
+        } 
     </script>
 </body>
 
