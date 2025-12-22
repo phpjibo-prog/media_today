@@ -87,7 +87,7 @@ def download():
             'outtmpl': f'{save_path}/{simple_name}.%(ext)s',
             'noplaylist': True,
             'quiet': True,
-            'cookiefile': 'cookies.txt',
+            # No cookiefile here unless you have a cookies.txt uploaded
         }
 
         if f_type == 'mp3':
@@ -100,30 +100,22 @@ def download():
                 }],
             })
         else:
+            # Optimized format selection to reduce server strain
             ydl_opts.update({
                 'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}]/best',
                 'merge_output_format': 'mp4',
             })
-
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             original_title = info.get('title', 'download')
             video_title = f"{sanitize_filename(original_title)}.{ext}"
 
-        # --- FIX: WAIT FOR FILE ---
-        # Sometimes ffmpeg takes a second to finalize the file after yt-dlp finishes
-        for _ in range(15):
-            if os.path.exists(downloaded_path):
-                break
-            time.sleep(1)
-
+        # Verification check
         if not os.path.exists(downloaded_path):
             files = os.listdir(save_path)
-            if files:
-                downloaded_path = os.path.join(save_path, files[0])
-            else:
-                raise FileNotFoundError("Processing failed to create a file.")
+            downloaded_path = os.path.join(save_path, files[0]) if files else None
+            if not downloaded_path: raise FileNotFoundError("Download failed.")
 
         file_size = os.path.getsize(downloaded_path)
 
@@ -133,11 +125,11 @@ def download():
                 with open(downloaded_path, 'rb') as f:
                     while True:
                         chunk = f.read(1024 * 1024) # 1MB chunks for stability
-                        if not chunk:
-                            break
+                        if not chunk: break
                         yield chunk
             finally:
-                # Cleanup after streaming finishes
+                # Give the system a second to close the file handle before deleting
+                time.sleep(2)
                 if os.path.exists(save_path):
                     shutil.rmtree(save_path)
 
@@ -151,8 +143,7 @@ def download():
         )
 
     except Exception as e:
-        if os.path.exists(save_path):
-            shutil.rmtree(save_path)
+        if os.path.exists(save_path): shutil.rmtree(save_path)
         return jsonify({'error': str(e)}), 400
         
 if __name__ == '__main__':
