@@ -255,6 +255,56 @@
                 pContainer.classList.add('hidden');
             }
         }
+
+        async function searchVideos() {
+            const query = document.getElementById('searchInput').value;
+            const resultsContainer = document.getElementById('searchResults');
+            
+            if (!query) return;
+        
+            resultsContainer.innerHTML = "<p class='text-center text-gray-500'>Searching...</p>";
+        
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                const data = await response.json();
+        
+                if (data.error) {
+                    resultsContainer.innerHTML = `<p class="text-red-400">Error: ${data.error}</p>`;
+                    return;
+                }
+        
+                resultsContainer.innerHTML = ""; // Clear loader
+                data.results.forEach(video => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center gap-4 p-3 bg-gray-700 rounded-lg hover:bg-gray-650 transition";
+                    div.innerHTML = `
+                        <img src="${video.thumbnail}" class="w-24 h-16 object-cover rounded shadow">
+                        <div class="flex-1">
+                            <h4 class="text-sm font-bold line-clamp-1">${video.title}</h4>
+                            <p class="text-xs text-gray-400">${video.duration}</p>
+                        </div>
+                        <button onclick="selectVideo('${video.url}')" 
+                                class="bg-red-600 hover:bg-red-700 text-xs px-3 py-2 rounded font-bold">
+                            Select
+                        </button>
+                    `;
+                    resultsContainer.appendChild(div);
+                });
+            } catch (err) {
+                resultsContainer.innerHTML = `<p class="text-red-400">Connection error.</p>`;
+            }
+        }
+        
+        // This fills the URL input and automatically triggers the existing info fetcher
+        function selectVideo(url) {
+            document.getElementById('urlInput').value = url;
+            fetchVideoInfo(); // Calls your existing function to show quality options
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         
     </script>
 </body>
