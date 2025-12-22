@@ -124,14 +124,14 @@
                 if (data.error) {
                     status.innerText = "Error: " + data.error;
                 } else {
-                    document.getElementById('videoDetails').classList.remove('hidden');
+                    const details = document.getElementById('videoDetails');
+                    details.classList.remove('hidden');
                     document.getElementById('videoTitle').innerText = data.title;
                     document.getElementById('videoDuration').innerText = "Duration: " + data.duration;
                     document.getElementById('thumb').src = data.thumbnail;
                     status.innerText = "";
         
-                    // SCROLL TO BOTTOM:
-                    // This waits a tiny bit for the browser to render the hidden div
+                    // Wait 100ms for the 'hidden' class to be fully removed and height calculated
                     setTimeout(() => {
                         window.scrollTo({
                             top: document.body.scrollHeight,
