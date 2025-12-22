@@ -34,6 +34,38 @@ def get_info():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+@app.route('/search', methods=['POST'])
+def search_videos():
+    query = request.json.get('query')
+    if not query:
+        return jsonify({'error': 'No query provided'}), 400
+    
+    try:
+        # Search for the top 5 results
+        ydl_opts = {
+            'quiet': True,
+            'extract_flat': True, # Faster: doesn't load full video info
+            'force_generic_extractor': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # 'ytsearch5:' tells yt-dlp to find 5 results on YouTube
+            search_results = ydl.extract_info(f"ytsearch5:{query}", download=False)
+            
+            videos = []
+            for entry in search_results.get('entries', []):
+                videos.append({
+                    'id': entry.get('id'),
+                    'title': entry.get('title'),
+                    'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
+                    'thumbnail': entry.get('thumbnails')[0]['url'] if entry.get('thumbnails') else '',
+                    'duration': entry.get('duration_string') or "N/A"
+                })
+            
+            return jsonify({'results': videos})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+        
+
 @app.route('/download', methods=['POST'])
 def download():
     data = request.json
