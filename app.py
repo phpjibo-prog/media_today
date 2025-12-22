@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, Response
+from flask import stream_with_context
 from werkzeug.wsgi import FileWrapper
 import yt_dlp
 import os
@@ -75,7 +76,7 @@ def download():
 
     request_id = re.sub(r'\D', '', str(os.urandom(4).hex())) 
     save_path = os.path.join(DOWNLOAD_FOLDER, request_id)
-    os.makedirs(save_path)
+    os.makedirs(save_path, exist_ok=True)
 
     simple_name = "download_file" 
     ext = 'mp3' if f_type == 'mp3' else 'mp4'
@@ -112,43 +113,40 @@ def download():
 
         # --- FIX: WAIT FOR FILE ---
         # Sometimes ffmpeg takes a second to finalize the file after yt-dlp finishes
-        retries = 10
-        while not os.path.exists(downloaded_path) and retries > 0:
+        for _ in range(15):
+            if os.path.exists(downloaded_path):
+                break
             time.sleep(1)
-            retries -= 1
 
         if not os.path.exists(downloaded_path):
-            # Fallback check: see if it saved with a different extension (like .m4a or .webm)
             files = os.listdir(save_path)
             if files:
                 downloaded_path = os.path.join(save_path, files[0])
             else:
-                raise FileNotFoundError(f"File not found at {downloaded_path}")
-        # ---------------------------
+                raise FileNotFoundError("Processing failed to create a file.")
 
+        file_size = os.path.getsize(downloaded_path)
+
+        @stream_with_context
         def generate():
             try:
                 with open(downloaded_path, 'rb') as f:
                     while True:
-                        chunk = f.read(65536) # Larger chunks for efficiency
+                        chunk = f.read(1024 * 1024) # 1MB chunks for stability
                         if not chunk:
                             break
                         yield chunk
             finally:
-                # The 'finally' block ensures cleanup happens 
-                # even if the user cancels the download halfway.
+                # Cleanup after streaming finishes
                 if os.path.exists(save_path):
                     shutil.rmtree(save_path)
-                    print(f"Cleanup Successful: Deleted temporary folder {save_path}")
-                else:
-                    print(f"Cleanup Warning: Folder {save_path} already removed or not found.")
-                    
+
         return Response(
             generate(),
             mimetype='application/octet-stream',
             headers={
                 "Content-Disposition": f"attachment; filename=\"{video_title}\"",
-                "Content-Length": os.path.getsize(downloaded_path)
+                "Content-Length": str(file_size)
             }
         )
 
