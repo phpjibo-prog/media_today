@@ -300,7 +300,13 @@
             } catch (err) {
                 resultsContainer.innerHTML = `<p class="text-red-400 p-2">Connection error.</p>`;
             }
-        }        
+        }
+
+        function selectVideo(url) {
+            document.getElementById('urlInput').value = url;
+            fetchVideoInfo(); // Calls your existing function to show quality options
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     </script>
 </body>
 
