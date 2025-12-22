@@ -107,6 +107,9 @@ def download():
                 # even if the user cancels the download halfway.
                 if os.path.exists(save_path):
                     shutil.rmtree(save_path)
+                    print(f"Cleanup Successful: Deleted temporary folder {save_path}")
+                else:
+                    print(f"Cleanup Warning: Folder {save_path} already removed or not found.")
                     
         return Response(
             generate(),
