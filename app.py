@@ -102,6 +102,12 @@ def download():
                         break
                     yield chunk
 
+            try:
+                shutil.rmtree(save_path) # Deletes the folder and its contents
+                print(f"Successfully deleted temporary folder: {save_path}")
+            except Exception as e:
+                print(f"Error deleting temporary folder: {e}")
+
         return Response(
             generate(),
             mimetype='application/octet-stream',
@@ -112,6 +118,8 @@ def download():
         )
 
     except Exception as e:
+        if os.path.exists(save_path):
+            shutil.rmtree(save_path)
         return jsonify({'error': str(e)}), 400
         
 if __name__ == '__main__':
