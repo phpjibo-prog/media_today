@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreamFetch | Pro Downloader</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="/static/manifest.json">
 </head>
 
 <style>
@@ -31,7 +32,12 @@
             class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent">
             Jibo YouTube Downloader
         </h1>
-
+        <button id="installBtn" class="hidden absolute right-0 bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded-lg transition-all flex items-center gap-2 border border-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Install
+        </button>
         <div class="flex flex-col sm:flex-row gap-3 mb-8">
             <input
                 type="text"
@@ -325,6 +331,42 @@
             fetchVideoInfo(); // Calls your existing function to show quality options
             
         }
+
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        
+        // Listen for the browser's install prompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the default mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            // Update UI notify the user they can install the PWA
+            installBtn.classList.remove('hidden');
+        });
+        
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            
+            // Show the install prompt
+            deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            
+            // We've used the prompt, and can't use it again, throw it away
+            deferredPrompt = null;
+            
+            // Hide the button
+            installBtn.classList.add('hidden');
+        });
+        
+        // Hide button if already installed
+        window.addEventListener('appinstalled', (evt) => {
+            installBtn.classList.add('hidden');
+            console.log('App was installed.');
+        });
     </script>
 </body>
 
