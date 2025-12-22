@@ -95,19 +95,19 @@ def download():
         # ---------------------------
 
         def generate():
-            with open(downloaded_path, 'rb') as f:
-                while True:
-                    chunk = f.read(8192)
-                    if not chunk:
-                        break
-                    yield chunk
-
             try:
-                shutil.rmtree(save_path) # Deletes the folder and its contents
-                print(f"Successfully deleted temporary folder: {save_path}")
-            except Exception as e:
-                print(f"Error deleting temporary folder: {e}")
-
+                with open(downloaded_path, 'rb') as f:
+                    while True:
+                        chunk = f.read(65536) # Larger chunks for efficiency
+                        if not chunk:
+                            break
+                        yield chunk
+            finally:
+                # The 'finally' block ensures cleanup happens 
+                # even if the user cancels the download halfway.
+                if os.path.exists(save_path):
+                    shutil.rmtree(save_path)
+                    
         return Response(
             generate(),
             mimetype='application/octet-stream',
