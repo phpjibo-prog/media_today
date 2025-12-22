@@ -128,6 +128,12 @@
                 document.getElementById('videoDuration').innerText = "Duration: " + data.duration;
                 document.getElementById('thumb').src = data.thumbnail;
                 status.innerText = "";
+
+                // Scroll to the bottom to show video options immediately
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: 'smooth'
+                });
             }
         }
 
@@ -305,7 +311,7 @@
         function selectVideo(url) {
             document.getElementById('urlInput').value = url;
             fetchVideoInfo(); // Calls your existing function to show quality options
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
         }
     </script>
 </body>
