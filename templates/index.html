@@ -8,6 +8,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
+<style>
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+    }
+</style>
+    
 <body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-6">
 
     <div class="max-w-2xl w-full bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
