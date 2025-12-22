@@ -75,6 +75,12 @@
         </div>
 
         <p id="status" class="text-center text-sm text-gray-400 mt-4"></p>
+
+        <div id="progressContainer" class="hidden w-full bg-gray-700 rounded-full h-4 mb-4 overflow-hidden">
+            <div id="progressBar" class="bg-red-600 h-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p id="progressText" class="text-center text-xs text-gray-400 mb-2"></p>
+        
     </div>
 
     <script>
@@ -153,6 +159,79 @@
                 status.innerText = "❌ " + err.message;
             }
         } 
+
+        async function download(format, quality) {
+            const url = document.getElementById('urlInput').value;
+            const status = document.getElementById('status');
+            const pContainer = document.getElementById('progressContainer');
+            const pBar = document.getElementById('progressBar');
+            const pText = document.getElementById('progressText');
+        
+            status.innerText = `🔄 Processing ${quality} ${format}...`;
+            pContainer.classList.remove('hidden');
+            pBar.style.width = '0%';
+        
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, format, quality })
+                });
+        
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Download failed');
+                }
+        
+                const contentLength = response.headers.get('Content-Length');
+                const total = parseInt(contentLength, 10);
+                let loaded = 0;
+        
+                const reader = response.body.getReader();
+                const chunks = [];
+        
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+        
+                    chunks.push(value);
+                    loaded += value.length;
+        
+                    if (total) {
+                        const percent = Math.round((loaded / total) * 100);
+                        pBar.style.width = `${percent}%`;
+                        pText.innerText = `${percent}% downloaded (${(loaded / 1024 / 1024).toFixed(1)} MB)`;
+                    }
+                }
+        
+                // Combine chunks into a single Blob
+                const blob = new Blob(chunks);
+                const downloadUrl = window.URL.createObjectURL(blob);
+                
+                // Handle Filename
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = format === 'mp3' ? `audio.mp3` : `video.mp4`;
+                if (disposition && disposition.includes('filename=')) {
+                    filename = disposition.split('filename=')[1].replace(/['"]/g, '');
+                }
+        
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                window.URL.revokeObjectURL(downloadUrl);
+                status.innerText = "✅ Download complete!";
+                pContainer.classList.add('hidden');
+                pText.innerText = "";
+        
+            } catch (err) {
+                status.innerText = "❌ " + err.message;
+                pContainer.classList.add('hidden');
+            }
+        }
+        
     </script>
 </body>
 
