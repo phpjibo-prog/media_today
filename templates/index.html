@@ -112,31 +112,43 @@
             const url = document.getElementById('urlInput').value;
             const status = document.getElementById('status');
             status.innerText = "Analyzing video...";
-
-            const response = await fetch('/get_info', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            });
-            const data = await response.json();
-
-            if (data.error) {
-                status.innerText = "Error: " + data.error;
-            } else {
-                document.getElementById('videoDetails').classList.remove('hidden');
-                document.getElementById('videoTitle').innerText = data.title;
-                document.getElementById('videoDuration').innerText = "Duration: " + data.duration;
-                document.getElementById('thumb').src = data.thumbnail;
-                status.innerText = "";
-
-                // Scroll to the bottom to show video options immediately
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: 'smooth'
+        
+            try {
+                const response = await fetch('/get_info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
                 });
+                const data = await response.json();
+        
+                if (data.error) {
+                    status.innerText = "Error: " + data.error;
+                } else {
+                    document.getElementById('videoDetails').classList.remove('hidden');
+                    document.getElementById('videoTitle').innerText = data.title;
+                    document.getElementById('videoDuration').innerText = "Duration: " + data.duration;
+                    document.getElementById('thumb').src = data.thumbnail;
+                    status.innerText = "";
+        
+                    // SCROLL TO BOTTOM:
+                    // This waits a tiny bit for the browser to render the hidden div
+                    setTimeout(() => {
+                        window.scrollTo({
+                            top: document.body.scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    }, 100);
+                }
+            } catch (err) {
+                status.innerText = "❌ Connection failed.";
             }
         }
-
+        
+        // Ensure selectVideo doesn't double-scroll
+        function selectVideo(url) {
+            document.getElementById('urlInput').value = url;
+            fetchVideoInfo(); 
+        }
         async function download(format, quality) {
             const url = document.getElementById('urlInput').value;
             const status = document.getElementById('status');
