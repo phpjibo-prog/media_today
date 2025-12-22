@@ -67,7 +67,7 @@ def download():
             })
         else:
             ydl_opts.update({
-                'format': f'bestvideo[height<={quality}]+bestaudio/best',
+                'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}]/best',
                 'merge_output_format': 'mp4',
             })
 
