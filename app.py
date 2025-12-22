@@ -54,6 +54,7 @@ def download():
             'outtmpl': f'{save_path}/{simple_name}.%(ext)s',
             'noplaylist': True,
             'quiet': True,
+            'cookiefile': 'cookies.txt',
         }
 
         if f_type == 'mp3':
