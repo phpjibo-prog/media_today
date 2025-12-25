@@ -28,3 +28,6 @@ COPY . .
 
 # Start app
 CMD gunicorn --bind 0.0.0.0:$PORT app:app
+
+CMD ["python", "worker.py"]
+
