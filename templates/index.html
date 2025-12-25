@@ -1,374 +1,696 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFetch | Pro Downloader</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="/static/manifest.json">
-    <link rel="icon" type="image/png" href="https://drive.google.com/uc?export=view&id=1RKyvUuaF0dq6i19hmyose-Xha0GIAqql">
-</head>
-
+{% block content %}
 <style>
-    @keyframes spin {
-        to { transform: rotate(360deg); }
+    /* Styling for the new radio dashboard */
+    .radio-dashboard {
+        display: flex;
+        /* Enables flexbox layout */
+        justify-content: space-between;
+        /* Pushes content to the far left and right */
+        align-items: center;
+        /* Vertically centers items */
+        padding: 15px 20px;
+        /* Some padding around the content */
+        margin-bottom: 20px;
+        /* Space below the dashboard */
+        background-color: #f8f8f8;
+        /* Light background for visibility */
+        border: 1px solid #ddd;
+        /* Subtle border */
+        border-radius: 8px;
+        /* Rounded corners */
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
-    .spinner {
-        display: inline-block;
-        width: 1rem;
-        height: 1rem;
-        border: 2px solid rgba(255,255,255,0.3);
+
+    .radio-dashboard h2 {
+        margin: 0;
+        /* Remove default margin from the heading */
+        color: #333;
+        font-size: 1.8em;
+    }
+
+    .radio-stats {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        /* Space between the 'Number of songs' text and the calendar */
+    }
+
+    .radio-stats p {
+        margin: 0;
+        font-weight: bold;
+        color: #555;
+    }
+
+    /* Basic styling for the date input to look clean */
+    .radio-stats input[type="date"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1em;
+        cursor: pointer;
+    }
+
+    .radio-dashboard {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        background-color: #f8f8f8;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+
+    .radio-dashboard h2 {
+        margin: 0;
+        color: #333;
+        font-size: 1.8em;
+    }
+
+    .radio-stats {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .radio-stats p {
+        margin: 0;
+        font-weight: bold;
+        color: #555;
+    }
+
+    .radio-stats input[type="date"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1em;
+        cursor: pointer;
+    }
+
+    /* ======================================
+    NEW Facebook-like Card/Theme Styles
+    ======================================
+    */
+    .radio-cards-container {
+        display: grid;
+        /* Use CSS Grid for a responsive, clean layout */
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        /* Cards will be at least 200px wide */
+        gap: 20px;
+        /* Space between the cards */
+        padding: 20px 0;
+        /* Padding above/below the grid */
+    }
+
+    .radio-card {
+        background-color: #fff;
+        /* White background, like a Facebook post/profile card */
+        border-radius: 8px;
+        /* Rounded corners */
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+        /* Subtle shadow for depth (FB-like) */
+        overflow: hidden;
+        /* Ensures image corners are rounded */
+        text-align: center;
+        /* Center text and image */
+        transition: transform 0.2s;
+        /* Smooth hover effect */
+        padding: 15px;
+        /* Added internal padding */
+    }
+
+    .radio-card:hover {
+        transform: translateY(-3px);
+        /* Slight lift on hover */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), 0 3px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .radio-card-icon {
+        width: 100px;
+        /* Fixed size for the icon thumbnail */
+        height: 100px;
+        object-fit: contain;
+        /* Ensures the icon fits without cropping */
         border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
-        margin-right: 8px;
+        /* Makes the icon circular */
+        border: 3px solid #1877f2;
+        /* A blue border (like Facebook blue) */
+        margin-bottom: 10px;
+    }
+
+    .radio-card h3 {
+        font-size: 1.2em;
+        margin: 5px 0 0;
+        color: #050505;
+        /* Dark text */
+    }
+
+    .radio-card p {
+        font-size: 0.9em;
+        color: #606770;
+        /* Muted text */
+        margin: 0;
+    }
+
+    /* Container for the entire picker system */
+    .date-picker-container {
+        max-width: 400px;
+        /* Limit width for cleaner look */
+        margin: 20px 0;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background-color: #f7f7f7;
+        font-family: Arial, sans-serif;
+    }
+
+    /* Selector buttons (Date, Week, Month) */
+    .view-selector {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+    }
+
+    .view-selector button {
+        flex-grow: 1;
+        /* Make buttons fill the space */
+        padding: 8px 12px;
+        border: none;
+        background-color: transparent;
+        cursor: pointer;
+        font-size: 1em;
+        font-weight: bold;
+        color: #606770;
+        /* Muted text color */
+        border-radius: 4px;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* Active/Selected button style */
+    .view-selector button.active {
+        background-color: #1877f2;
+        /* Facebook Blue */
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .view-selector button:hover:not(.active) {
+        background-color: #e4e6eb;
+        /* Light grey hover */
+    }
+
+    /* Input View Container */
+    .input-views {
+        position: relative;
+        min-height: 40px;
+        /* Ensure container has height even when inputs are hidden */
+    }
+
+    /* Styling for the actual HTML input fields (date, week, month) */
+    .picker-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1em;
+        box-sizing: border-box;
+        /* Include padding and border in the element's total width and height */
+        position: absolute;
+        /* Stack inputs */
+        top: 0;
+        left: 0;
+    }
+
+    /* Hide the non-active input fields */
+    .hidden {
+        display: none !important;
+    }
+
+    /* Ensure the active input is always visible (and overrides 'hidden') */
+    .picker-input.active {
+        display: block;
+    }
+
+    .filter-button {
+        background-color: #3b5998;
+        /* Facebook Blue */
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.2s;
+        margin-left: 10px;
+        /* Space from the date picker */
+    }
+
+    .filter-button:hover {
+        background-color: #2e477a;
+    }
+
+    .mp3-dashboard {
+        margin-top: 20px;
+        background-color: #fff;
+        border: 1px solid #dddfe2;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        padding: 15px;
+    }
+
+    .mp3-tabs-container {
+        display: flex;
+        border-bottom: 1px solid #f0f2f5;
+        /* Light grey separator */
+        margin-bottom: 15px;
+    }
+
+    .mp3-tab {
+        flex-grow: 1;
+        padding: 10px 15px;
+        border: none;
+        background-color: transparent;
+        cursor: pointer;
+        font-size: 1.0em;
+        font-weight: 600;
+        color: #606770;
+        /* Muted text */
+        border-bottom: 3px solid transparent;
+        /* Placeholder for active state */
+        transition: color 0.2s, border-bottom-color 0.2s;
+    }
+
+    .mp3-tab:hover:not(.active) {
+        background-color: #f0f2f5;
+        border-radius: 4px 4px 0 0;
+    }
+
+    .mp3-tab.active {
+        color: #3b5998;
+        /* Facebook Blue */
+        border-bottom-color: #3b5998;
+    }
+
+    .mp3-content-wrapper {
+        min-height: 100px;
+    }
+
+    .mp3-content-panel {
+        padding: 10px 0;
+    }
+
+    .mp3-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .mp3-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f2f5;
+        color: #050505;
+    }
+
+    .mp3-item:last-child {
+        border-bottom: none;
+    }
+
+    .login-links-container {
+        text-align: center;
+        padding: 30px;
+        background-color: #f0f2f5;
+        border-radius: 6px;
+        border: 1px solid #dddfe2;
+    }
+
+    .login-links-container h3 {
+        margin-top: 0;
+        color: #3b5998;
+    }
+
+    .login-toggle-btn {
+        background-color: #3b5998;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 700;
+        margin-bottom: 15px;
+        width: 100%;
+    }
+
+    .login-toggle-btn:hover {
+        background-color: #2e477a;
+    }
+
+    .login-link {
+        display: block;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background-color 0.2s;
+    }
+
+    .login-link.google {
+        background-color: #db4437;
+        /* Google Red */
+        color: white;
+    }
+
+    .login-link.google:hover {
+        background-color: #c33d32;
+    }
+
+    .login-link.facebook {
+        background-color: #1877f2;
+        /* Facebook Blue */
+        color: white;
+    }
+
+    .login-link.facebook:hover {
+        background-color: #1562c2;
+    }
+
+    .mp3-item-detail {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9em;
+        color: #606770;
+        margin-top: 5px;
+    }
+
+    /* Small icon styling */
+    .radio-icon-small {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        border-radius: 50%;
+        margin-right: 5px;
+        border: 1px solid #dddfe2;
     }
 </style>
-    
-<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-6">
 
-    <div class="max-w-2xl w-full bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
-        <h1
-            class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent">
-            Jibo YouTube Downloader
-        </h1>
-        <button id="installBtn" class="hidden absolute right-0 bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded-lg transition-all flex items-center gap-2 border border-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Install
+<form method="POST" action="{{ url_for('home') }}" id="radio-filter-form">
+    <div class="radio-dashboard">
+        <h2>📻 Radios</h2>
+
+        <div class="radio-stats">
+            <p>Number of stations: **{{ all_radios|length }}**</p>
+            <p>Total Songs: **{{ total_songs }}**</p>
+
+            <div class="date-picker-container">
+                <div class="view-selector">
+                    <button type="button" id="view-date" data-type="date">Date</button>
+                    <button type="button" id="view-week" data-type="week">Week</button>
+                    <button type="button" id="view-month" data-type="month">Month</button>
+                </div>
+
+                <div class="input-views" style="position: relative;">
+                    <input type="hidden" name="date_type" id="date-type-hidden" value="{{ current_date_type }}">
+                    <input type="hidden" name="date_value" id="date-value-hidden" value="{{ current_date_value }}">
+
+                    <input type="date" id="calendar-select-date" data-type="date"
+                        class="picker-input {% if current_date_type != 'date' %}hidden{% endif %}"
+                        value="{% if current_date_type == 'date' %}{{ current_date_value }}{% endif %}"
+                        onchange="updateHiddenFields(this)">
+
+                    <input type="week" id="calendar-select-week" data-type="week"
+                        class="picker-input {% if current_date_type != 'week' %}hidden{% endif %}"
+                        value="{% if current_date_type == 'week' %}{{ current_date_value }}{% endif %}"
+                        onchange="updateHiddenFields(this)">
+
+                    <input type="month" id="calendar-select-month" data-type="month"
+                        class="picker-input {% if current_date_type != 'month' %}hidden{% endif %}"
+                        value="{% if current_date_type == 'month' %}{{ current_date_value }}{% endif %}"
+                        onchange="updateHiddenFields(this)">
+                </div>
+            </div>
+
+            <button type="submit" class="filter-button">Apply Filter</button>
+        </div>
+    </div>
+</form>
+
+<div class="radio-cards-container">
+    <audio id="radio-player" controls style="display:none;"></audio>
+
+    {% for radio in all_radios %}
+    <div class="radio-card">
+        <img src="{{ url_for('static', filename=radio.icon_path) }}" alt="{{ radio.radio_name }} Icon"
+            class="radio-card-icon">
+
+        <h3>{{ radio.radio_name }}</h3>
+
+        <p>Region: **{{ radio.region_name }}**</p>
+
+        <p>Played Songs: **{{ radio.played_count }}**</p>
+
+        <button class="play-radio-btn" data-stream-url="{{ radio.stream_link }}"
+            data-radio-name="{{ radio.radio_name }}">
+            ▶ Play Stream
         </button>
-        <div class="flex flex-col sm:flex-row gap-3 mb-8">
-            <input
-                type="text"
-                id="urlInput"
-                placeholder="Paste YouTube link here..."
-                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3
-                       focus:outline-none focus:ring-2 focus:ring-red-500 transition"
-            >
-        
-            <button
-                onclick="fetchVideoInfo()"
-                class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg
-                       font-semibold transition w-full sm:w-auto"
-            >
-                Download
-            </button>
-        </div>
+    </div>
+    {% else %}
+    <p>No radio stations have been added yet.</p>
+    {% endfor %}
+</div>
 
-        <div class="mb-10 p-6 bg-gray-750 border border-dashed border-gray-600 rounded-2xl">
-            <h2 class="text-lg font-semibold mb-4 text-gray-300">Search YouTube</h2>
-            <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="searchInput" placeholder="Search for videos..." 
-                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-                <button onclick="searchVideos()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold transition">
-                    Search
-                </button>
-            </div>
-            
-            <div id="searchResults" class="mt-6"></div>
-        </div>
-        
-        <hr class="border-gray-700 mb-10">
-
-        <div id="videoDetails" class="hidden mb-8 p-4 bg-gray-750 border border-gray-700 rounded-xl">
-            <div class="flex gap-4">
-                <img id="thumb" class="w-32 rounded-lg object-cover" src="" alt="Thumbnail">
-                <div>
-                    <h3 id="videoTitle" class="font-bold text-lg line-clamp-2"></h3>
-                    <p id="videoDuration" class="text-gray-400 text-sm"></p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 mt-6">
-                <div>
-                    <h4 class="text-xs font-bold uppercase text-gray-500 mb-2">Audio (MP3)</h4>
-                    <button onclick="download('mp3', '320')"
-                        class="w-full mb-2 bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded">320kbps</button>
-                    <button onclick="download('mp3', '128')"
-                        class="w-full bg-gray-700 hover:bg-gray-600 text-sm py-2 rounded">128kbps</button>
-                </div>
-                <div>
-                    <h4 class="text-xs font-bold uppercase text-gray-500 mb-2">Video (MP4)</h4>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="download('mp4', '1080')"
-                            class="bg-blue-600 hover:bg-blue-700 text-xs py-2 rounded">1080p</button>
-                        <button onclick="download('mp4', '720')"
-                            class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">720p</button>
-                        <button onclick="download('mp4', '480')"
-                            class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">480p</button>
-                        <button onclick="download('mp4', '360')"
-                            class="bg-gray-700 hover:bg-gray-600 text-xs py-2 rounded">360p</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <p id="status" class="text-center text-sm text-gray-400 mt-4"></p>
-
-        <div id="progressContainer" class="hidden w-full bg-gray-700 rounded-full h-4 mb-4 overflow-hidden">
-            <div id="progressBar" class="bg-red-600 h-full transition-all duration-300" style="width: 0%"></div>
-        </div>
-        <p id="progressText" class="text-center text-xs text-gray-400 mb-2"></p>
-        
+<div class="mp3-dashboard">
+    <div class="mp3-tabs-container">
+        <button class="mp3-tab active" data-target="most-played-mp3">Most Played Mp3</button>
+        <button class="mp3-tab" data-target="my-list">My List</button>
     </div>
 
-    <script>
-        async function fetchVideoInfo() {
-            const url = document.getElementById('urlInput').value;
-            const status = document.getElementById('status');
-            status.innerText = "Analyzing video...";
-        
-            try {
-                const response = await fetch('/get_info', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
-                });
-                const data = await response.json();
-        
-                if (data.error) {
-                    status.innerText = "Error: " + data.error;
-                } else {
-                    const details = document.getElementById('videoDetails');
-                    details.classList.remove('hidden');
-                    document.getElementById('videoTitle').innerText = data.title;
-                    document.getElementById('videoDuration').innerText = "Duration: " + data.duration;
-                    document.getElementById('thumb').src = data.thumbnail;
-                    status.innerText = "";
-        
-                    // Wait 100ms for the 'hidden' class to be fully removed and height calculated
-                    setTimeout(() => {
-                        window.scrollTo({
-                            top: document.body.scrollHeight,
-                            behavior: 'smooth'
-                        });
-                    }, 100);
-                }
-            } catch (err) {
-                status.innerText = "❌ Connection failed.";
-            }
-        }
-        
-        // Ensure selectVideo doesn't double-scroll
-        function selectVideo(url) {
-            document.getElementById('urlInput').value = url;
-            fetchVideoInfo(); 
-        }
-        async function download(format, quality) {
-            const url = document.getElementById('urlInput').value;
-            const status = document.getElementById('status');
-            status.innerText = `🔄 Preparing your ${quality} ${format}... Please wait.`;
-        
-            try {
-                const response = await fetch('/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, format, quality })
-                });
-        
-                // Check if the server returned an error (e.g., timeout or conversion error)
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Download failed');
-                }
-        
-                // 1. Get the real filename from the server's Content-Disposition header
-                // This ensures the file saves with the actual YouTube video title
-                const disposition = response.headers.get('Content-Disposition');
-                let filename = format === 'mp3' ? `audio_${quality}k.mp3` : `video_${quality}p.mp4`;
-                
-                if (disposition && disposition.indexOf('attachment') !== -1) {
-                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                    const matches = filenameRegex.exec(disposition);
-                    if (matches != null && matches[1]) { 
-                        filename = matches[1].replace(/['"]/g, '');
-                    }
-                }
-        
-                // 2. Process the incoming data stream as a Blob
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-        
-                // 3. Trigger the browser's download dialog
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = filename; 
-                document.body.appendChild(a);
-                a.click();
-        
-                // 4. Cleanup to free up browser memory
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(downloadUrl);
-                status.innerText = "✅ Download complete!";
-        
-            } catch (err) {
-                console.error(err);
-                status.innerText = "❌ " + err.message;
-            }
-        } 
+    <div class="mp3-content-wrapper">
+        <div id="most-played-mp3" class="mp3-content-panel">
+            <h3>
+                {% if logged_in %}
+                Your Most Played Tracks
+                {% else %}
+                Most Played Tracks (All Users)
+                {% endif %}
+                (Last 7 Days/Selected Period)
+            </h3>
 
-        async function download(format, quality) {
-            const url = document.getElementById('urlInput').value;
-            const status = document.getElementById('status');
-            const pContainer = document.getElementById('progressContainer');
-            const pBar = document.getElementById('progressBar');
-            const pText = document.getElementById('progressText');
-        
-            status.innerText = `🔄 Processing ${quality} ${format}...`;
-            pContainer.classList.remove('hidden');
-            pBar.style.width = '0%';
-        
-            try {
-                const response = await fetch('/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, format, quality })
-                });
-        
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Download failed');
-                }
-        
-                const contentLength = response.headers.get('Content-Length');
-                const total = parseInt(contentLength, 10);
-                let loaded = 0;
-        
-                const reader = response.body.getReader();
-                const chunks = [];
-        
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-        
-                    chunks.push(value);
-                    loaded += value.length;
-        
-                    if (total) {
-                        const percent = Math.round((loaded / total) * 100);
-                        pBar.style.width = `${percent}%`;
-                        pText.innerText = `${percent}% downloaded wait for download to finish (${(loaded / 1024 / 1024).toFixed(1)} MB)`;
-                    }
-                }
-        
-                // Combine chunks into a single Blob
-                const blob = new Blob(chunks);
-                const downloadUrl = window.URL.createObjectURL(blob);
-                
-                // Handle Filename
-                const disposition = response.headers.get('Content-Disposition');
-                let filename = format === 'mp3' ? `audio.mp3` : `video.mp4`;
-                if (disposition && disposition.includes('filename=')) {
-                    filename = disposition.split('filename=')[1].replace(/['"]/g, '');
-                }
-        
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                
-                window.URL.revokeObjectURL(downloadUrl);
-                status.innerText = "✅ Download complete!";
-                pContainer.classList.add('hidden');
-                pText.innerText = "";
-        
-            } catch (err) {
-                status.innerText = "❌ " + err.message;
-                pContainer.classList.add('hidden');
-            }
-        }
+            {% if most_played_data %}
+            <ul class="mp3-list">
+                {% for song in most_played_data %}
+                <li class="mp3-item">
+                    {{ loop.index }}.
+                    <strong>{{ song.track_name }}</strong>
+                    <span style="font-size: 0.9em; color: #606770;">(Total: {{ song.total_count }} plays)</span>
 
-        async function searchVideos() {
-            const query = document.getElementById('searchInput').value;
-            const resultsContainer = document.getElementById('searchResults');
-            
-            if (!query) return;
-        
-            resultsContainer.innerHTML = "<div class='flex justify-center p-4'><div class='spinner'></div><span>Searching...</span></div>";
-        
-            try {
-                const response = await fetch('/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query })
-                });
-                const data = await response.json();
-        
-                if (data.error) {
-                    resultsContainer.innerHTML = `<p class="text-red-400 p-2">Error: ${data.error}</p>`;
-                    return;
-                }
-        
-                resultsContainer.innerHTML = ""; 
-                data.results.forEach(video => {
-                    const div = document.createElement('div');
-                    // Using flex-col for mobile (vertical) and sm:flex-row for desktop (horizontal)
-                    div.className = "flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 mb-3 bg-gray-800 border border-gray-700 rounded-xl hover:border-blue-500 transition shadow-sm";
-                    div.innerHTML = `
-                        <img src="${video.thumbnail}" class="w-full sm:w-32 h-40 sm:h-20 object-cover rounded-lg">
-                        <div class="flex-1 w-full">
-                            <h4 class="text-sm sm:text-base font-bold text-white mb-1 leading-tight">
-                                ${video.title}
-                            </h4>
-                            <p class="text-xs text-gray-400 mb-3 sm:mb-0">${video.duration}</p>
+                    <div class="mp3-item-detail">
+                        {% for radio in song.radios %}
+                        <div style="display: flex; align-items: center; margin-right: 15px;">
+                            <img src="{{ url_for('static', filename=radio.icon_path) }}" alt="{{ radio.radio_name }}"
+                                class="radio-icon-small" style="width: 20px; height: 20px;">
+                            <span>{{ radio.radio_name }} ({{ radio.count }})</span>
                         </div>
-                        <button onclick="selectVideo('${video.url}')" 
-                                class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-2.5 rounded-lg font-bold transition-all active:scale-95">
-                            Select
-                        </button>
-                    `;
-                    resultsContainer.appendChild(div);
+                        {% endfor %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No songs matching your criteria have been played in the selected period.</p>
+            {% endif %}
+        </div>
+
+        <div id="my-list" class="mp3-content-panel hidden">
+            {% if logged_in %}
+            <h3>Your Tracked Songs (Last 7 Days/Selected Period)</h3>
+
+            {% if user_tracks_data %}
+            <ul class="mp3-list">
+                {% for song in user_tracks_data %}
+                <li class="mp3-item">
+                    <strong>{{ song.track_name }}</strong>
+                    <div class="mp3-item-detail">
+                        {% for radio in song.radios %}
+                        <div style="display: flex; align-items: center;">
+                            <img src="{{ url_for('static', filename=radio.icon_path) }}" alt="{{ radio.radio_name }}"
+                                class="radio-icon-small">
+                            <span>{{ radio.radio_name }} ({{ radio.count }} plays)</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>You are not currently tracking any songs, or your tracked songs have not played in the selected period.
+            </p>
+            {% endif %}
+
+            {% else %}
+            <div class="login-links-container">
+                <button class="login-toggle-btn" id="add-mp3-toggle">
+                    Add mp3 (Log In to Track)
+                </button>
+                <div id="login-links" class="hidden">
+                    <a href="{{ url_for('login_simulation', provider='google') }}" class="login-link google">Log in with
+                        Google</a>
+                    <a href="{{ url_for('login_simulation', provider='facebook') }}" class="login-link facebook">Log in
+                        with Facebook</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Helper function to update hidden form fields when an input value changes
+    function updateHiddenFields(inputElement) {
+        document.getElementById('date-type-hidden').value = inputElement.getAttribute('data-type');
+        document.getElementById('date-value-hidden').value = inputElement.value;
+    }
+
+    // This simple JavaScript is essential to toggle visibility and manage the active state.
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Initialize active button based on current_date_type
+        const initialType = '{{ current_date_type }}';
+
+        // Remove active class from all buttons
+        document.querySelectorAll('.view-selector button').forEach(btn => btn.classList.remove('active'));
+
+        // Set active class on the corresponding button
+        const initialButton = document.querySelector(`.view-selector button[data-type="${initialType}"]`);
+        if (initialButton) {
+            initialButton.classList.add('active');
+        }
+
+        // 2. Set event listeners for view selector buttons
+        document.querySelectorAll('.view-selector button').forEach(button => {
+            button.addEventListener('click', function () {
+                // Update button active state
+                document.querySelector('.view-selector .active').classList.remove('active');
+                this.classList.add('active');
+
+                const newType = this.getAttribute('data-type');
+                const targetId = `calendar-select-${newType}`;
+                const targetInput = document.getElementById(targetId);
+
+                // Update hidden type field immediately
+                document.getElementById('date-type-hidden').value = newType;
+
+                // Hide all inputs and show the target one
+                document.querySelectorAll('.picker-input').forEach(input => {
+                    input.classList.add('hidden');
                 });
-            } catch (err) {
-                resultsContainer.innerHTML = `<p class="text-red-400 p-2">Connection error.</p>`;
+
+                targetInput.classList.remove('hidden');
+
+                // Also update the value in the hidden field to the current value of the newly visible input
+                document.getElementById('date-value-hidden').value = targetInput.value;
+            });
+        });
+
+        // 3. Audio Player Logic (Keep this)
+        const audioPlayer = document.getElementById('radio-player');
+        let currentButton = null;
+
+        document.querySelectorAll('.play-radio-btn').forEach(button => {
+            // ... existing audio playback logic remains the same ...
+            button.addEventListener('click', function () {
+                const streamUrl = this.getAttribute('data-stream-url');
+                const radioName = this.getAttribute('data-radio-name');
+
+                // 1. Check if the current radio is already playing
+                if (audioPlayer.src === streamUrl && !audioPlayer.paused) {
+                    // Pause the stream
+                    audioPlayer.pause();
+                    this.textContent = '▶ Play Stream';
+                    currentButton = null;
+                } else {
+                    // 2. Stop any currently playing stream and reset its button text
+                    if (currentButton) {
+                        currentButton.textContent = '▶ Play Stream';
+                    }
+
+                    // 3. Start playing the new radio stream
+                    audioPlayer.src = streamUrl;
+                    audioPlayer.play()
+                        .then(() => {
+                            this.textContent = '⏸ Pause Stream';
+                            currentButton = this;
+                            // You can display a message to the user here (e.g., in a status bar)
+                            console.log(`Now playing: ${radioName}`);
+                        })
+                        .catch(e => {
+                            console.error(`Error playing stream for ${radioName}:`, e);
+                            alert(`Could not play stream for ${radioName}. Check the stream link.`);
+                            this.textContent = '▶ Play Stream';
+                        });
+                }
+            });
+        });
+
+        // Handle button text when playback is externally stopped/errors
+        audioPlayer.addEventListener('pause', () => {
+            if (currentButton) {
+                currentButton.textContent = '▶ Play Stream';
             }
+        });
+
+        audioPlayer.addEventListener('error', (e) => {
+            console.error("Audio playback error:", e);
+            if (currentButton) {
+                currentButton.textContent = '▶ Play Stream';
+            }
+        });
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.mp3-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                // 1. Deactivate all tabs and hide all content panels
+                document.querySelectorAll('.mp3-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.mp3-content-panel').forEach(p => p.classList.add('hidden'));
+
+                // 2. Activate the clicked tab
+                this.classList.add('active');
+
+                // 3. Show the corresponding content panel
+                const targetId = this.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+            });
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.mp3-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                // 1. Deactivate all tabs and hide all content panels
+                document.querySelectorAll('.mp3-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.mp3-content-panel').forEach(p => p.classList.add('hidden'));
+
+                // 2. Activate the clicked tab
+                this.classList.add('active');
+
+                // 3. Show the corresponding content panel
+                const targetId = this.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+            });
+        });
+
+        // NEW: Login Toggle Logic for "My List"
+        const toggleBtn = document.getElementById('add-mp3-toggle');
+        const loginLinks = document.getElementById('login-links');
+
+        if (toggleBtn && loginLinks) {
+            toggleBtn.addEventListener('click', function () {
+                loginLinks.classList.toggle('hidden');
+            });
         }
-
-        function selectVideo(url) {
-            document.getElementById('urlInput').value = url;
-            fetchVideoInfo(); // Calls your existing function to show quality options
-            
-        }
-
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-        
-        // Listen for the browser's install prompt event
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent the default mini-infobar from appearing on mobile
-            e.preventDefault();
-            // Stash the event so it can be triggered later.
-            deferredPrompt = e;
-            // Update UI notify the user they can install the PWA
-            installBtn.classList.remove('hidden');
-        });
-        
-        installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            
-            // Show the install prompt
-            deferredPrompt.prompt();
-            
-            // Wait for the user to respond to the prompt
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            
-            // We've used the prompt, and can't use it again, throw it away
-            deferredPrompt = null;
-            
-            // Hide the button
-            installBtn.classList.add('hidden');
-        });
-        
-        // Hide button if already installed
-        window.addEventListener('appinstalled', (evt) => {
-            installBtn.classList.add('hidden');
-            console.log('App was installed.');
-        });
-    </script>
-</body>
-
-</html>
+    });
+</script>
+{% endblock %}
