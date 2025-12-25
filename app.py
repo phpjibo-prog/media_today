@@ -388,7 +388,8 @@ def recognize_live_stream():
         response.close()
         # 2. Decode to WAV for high-accuracy fingerprinting
         audio = AudioSegment.from_file(mp3_path)
-        audio = audio[:10000]
+        audio = audio.set_frame_rate(44100).set_channels(1) # Force standard rate and Mono
+        audio = audio[:10000] # Take 10 seconds
         audio.export(wav_path, format="wav")
         
         if os.path.exists(mp3_path):
