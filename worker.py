@@ -37,10 +37,14 @@ def main():
     os.makedirs(temp_folder, exist_ok=True)
 
     while True:
+        print("[WORKER] Polling database...", flush=True)
         conn = None
         local_path = None
         try:
-            conn = mysql.connector.connect(**DB_CONFIG)
+            conn = mysql.connector.connect(
+                **DB_CONFIG,
+                connection_timeout=5
+            )
             cursor = conn.cursor(dictionary=True)
 
             # Look for tracks waiting to be downloaded
