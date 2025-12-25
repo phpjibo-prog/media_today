@@ -31,7 +31,7 @@ def main():
     )
 
     # Start the recorder in a separate thread/background
-    recorder.start()
+    #recorder.start()
 
     temp_folder = os.path.join(os.getcwd(), 'temp')
     os.makedirs(temp_folder, exist_ok=True)
