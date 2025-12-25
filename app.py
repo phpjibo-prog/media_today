@@ -375,22 +375,23 @@ def recognize_live_stream():
 
     try:
         # 1. Record 10 seconds
-        response = requests.get(stream_url, stream=True, timeout=15)
+        response = requests.get(stream_url, stream=True, timeout=20)
         max_bytes = 250000  # Cap at ~250KB to prevent the 40s issue
         bytes_recorded = 0
         start_time = time.time()
         with open(mp3_path, 'wb') as f:
             for block in response.iter_content(2048):
                 f.write(block)
-                if time.time() - start_time > 10:
+                if time.time() - start_time > 15:
                     break
                     
         response.close()
         # 2. Decode to WAV for high-accuracy fingerprinting
         audio = AudioSegment.from_file(mp3_path)
-        audio = audio.set_frame_rate(44100).set_channels(1) # Force standard rate and Mono
-        audio = audio[:10000] # Take 10 seconds
+        audio = audio[:15000]  # 15 seconds
+        audio = audio.set_frame_rate(44100).set_channels(1)  # Match fingerprint DB
         audio.export(wav_path, format="wav")
+        
         
         if os.path.exists(mp3_path):
             os.remove(mp3_path)
