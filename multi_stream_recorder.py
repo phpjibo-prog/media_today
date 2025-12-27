@@ -143,7 +143,7 @@ class MultiStreamRecorder:
     def _record_single(self, idx, url):
         #matcher = self._get_matcher()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"radio_{idx}_{timestamp}.mp3"
+        filename = f"radio_{idx}_{timestamp}.wav"
         path = os.path.join(self.output_folder, filename)
 
         print(f"[Recorder] Recording {url} → {filename}")
