@@ -424,10 +424,10 @@ def recognize_live_stream():
                     
                     <h4>Verification Player:</h4>
                     <p style="font-size: 0.9em; color: #666;">Listen to exactly what the system heard:</p>
-                    <audio controls src="/static/recordings/{wav_filename}" style="width: 100%;"></audio>
+                    <audio controls src="/static/recordings/{wav_path}" style="width: 100%;"></audio>
                     
                     <div style="margin-top: 30px;">
-                        <a href="/api/delete_recording?file={wav_filename}" 
+                        <a href="/api/delete_recording?file={wav_path}" 
                            style="background: #ff4444; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                            DELETE RECORDING
                         </a>
