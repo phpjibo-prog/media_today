@@ -340,6 +340,47 @@ def home():
 VERIFY_FOLDER = 'static/recordings'
 os.makedirs(VERIFY_FOLDER, exist_ok=True)
 
+@app.route("/api/recognize_radio_acrcloud", methods=["GET"])
+def recognize_radio_acrcloud():
+    stream_url = request.args.get("stream_url")
+    if not stream_url:
+        return {"error": "Missing stream_url"}, 400
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        wav_path = tmp.name
+
+    try:
+        # 1️⃣ Record radio
+        record_radio(stream_url, wav_path, duration=12)
+
+        # 2️⃣ Send to ACRCloud
+        result = recognize_with_acrcloud(wav_path)
+
+        status = result.get("status", {})
+        if status.get("code") != 0:
+            return jsonify({
+                "matched": False,
+                "reason": status.get("msg"),
+                "raw": result
+            })
+
+        music = result["metadata"]["music"][0]
+
+        return jsonify({
+            "matched": True,
+            "title": music.get("title"),
+            "artist": ", ".join(a["name"] for a in music.get("artists", [])),
+            "album": music.get("album", {}).get("name"),
+            "score": music.get("score"),
+            "label": music.get("label"),
+            "release_date": music.get("release_date"),
+            "raw": result
+        })
+
+    finally:
+        if os.path.exists(wav_path):
+            os.remove(wav_path)
+
 @app.route("/youtube-formats", methods=["GET", "POST"])
 def youtube_formats():
     video_formats = []
