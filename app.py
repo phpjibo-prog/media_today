@@ -361,46 +361,42 @@ def youtube_formats():
 
 @app.route('/api/recognize_live_stream', methods=['GET'])
 def recognize_live_stream():
+    import tempfile
+    from pydub import AudioSegment
+
     stream_url = request.args.get('stream_url')
     if not stream_url:
         return "Error: Missing stream_url parameter", 400
 
     record_dir = 'static/recordings'
     os.makedirs(record_dir, exist_ok=True)
-    
+
     timestamp = int(time.time())
-    mp3_path = os.path.join(record_dir, f"temp_{timestamp}.mp3")
-    wav_filename = f"verify_{timestamp}.wav"
-    wav_path = os.path.join(record_dir, wav_filename)
+    wav_path = os.path.join(record_dir, f"verify_{timestamp}.wav")
 
     try:
-        # 1. Record 10 seconds
-        response = requests.get(stream_url, stream=True, timeout=20)
-        max_bytes = 250000  # Cap at ~250KB to prevent the 40s issue
-        bytes_recorded = 0
-        start_time = time.time()
-        with open(mp3_path, 'wb') as f:
-            for block in response.iter_content(2048):
-                f.write(block)
-                if time.time() - start_time > 15:
-                    break
-                    
-        response.close()
-        # 2. Decode to WAV for high-accuracy fingerprinting
-        audio = AudioSegment.from_file(mp3_path)
-        audio = audio[:15000]  # 15 seconds
-        audio = audio.set_frame_rate(44100).set_channels(1)  # Match fingerprint DB
-        audio.export(wav_path, format="wav")
-        
-        
-        if os.path.exists(mp3_path):
-            os.remove(mp3_path)
+        # 1️⃣ Record 15 seconds directly to WAV via FFmpeg
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", stream_url,
+            "-t", "15",           # 15 seconds recording
+            "-ac", "1",           # mono
+            "-ar", "44100",       # match Dejavu
+            "-vn",
+            "-f", "wav",
+            wav_path
+        ]
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
-        # 3. Recognize using the WAV file
+        if not os.path.exists(wav_path):
+            return "Recording failed", 500
+
+        # 2️⃣ Recognize using Dejavu
         raw_results = fingerprint.recognize_file(wav_path)
         clean_results = json_serializable(raw_results)
 
-        # 4. Apply your specific logic: Hashes >= 50 AND Confidence >= 8
+        # 3️⃣ Relax thresholds for radio
         matches = clean_results.get('results', [])
         is_exact_match = False
         hashes = 0
@@ -411,43 +407,27 @@ def recognize_live_stream():
             top_match = matches[0]
             hashes = top_match.get('hashes_matched_in_input', 0)
             conf = top_match.get('input_confidence', 0)
-            
-            if hashes >= 50 and conf >= 8:
+            if hashes >= 20 and conf >= 4:   # relaxed thresholds
                 is_exact_match = True
                 song_name = top_match.get('song_name', 'Unknown')
 
         status_msg = f"MATCH FOUND: {song_name}" if is_exact_match else "MATCH REJECTED / NOT FOUND"
 
-        # 5. Return HTML Verification Page
         return f"""
         <html>
-            <body style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
-                <h2>Live Stream Recognition Dashboard</h2>
-                <div style="background: #fdfdfd; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3 style="color: {'#28a745' if is_exact_match else '#dc3545'};">{status_msg}</h3>
-                    <p><strong>Metrics:</strong> {hashes} Hashes (Target: 50) | {conf} Confidence (Target: 8)</p>
-                    
-                    <h4>Verification Player:</h4>
-                    <p style="font-size: 0.9em; color: #666;">Listen to exactly what the system heard:</p>
-                    <audio controls src="/static/recordings/{wav_filename}" style="width: 100%;"></audio>
-                    
-                    <div style="margin-top: 30px;">
-                        <a href="/api/delete_recording?file={wav_filename}" 
-                           style="background: #ff4444; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                           DELETE RECORDING
-                        </a>
-                        <a href="{request.full_path}" style="margin-left: 15px; color: #007bff;">Try Again</a>
-                    </div>
-                </div>
-                <hr style="margin-top: 40px;">
-                <h4>Raw Engine Output:</h4>
-                <pre style="background: #222; color: #0f0; padding: 15px; overflow: auto; border-radius: 5px;">{json.dumps(clean_results, indent=2)}</pre>
+            <body>
+                <h2>Live Stream Recognition</h2>
+                <p style="color: {'green' if is_exact_match else 'red'};">{status_msg}</p>
+                <p>Hashes: {hashes} | Confidence: {conf}</p>
+                <audio controls src="/static/recordings/{os.path.basename(wav_path)}"></audio>
+                <pre>{json.dumps(clean_results, indent=2)}</pre>
             </body>
         </html>
         """
 
     except Exception as e:
         return f"Recognition failed: {str(e)}", 500
+
         
 # 2. Add a route to manually delete the file
 @app.route('/api/delete_recording')
