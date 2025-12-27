@@ -362,15 +362,13 @@ def youtube_formats():
 @app.route('/api/recognize_live_stream', methods=['GET'])
 def recognize_live_stream():
     import tempfile
-    from pydub import AudioSegment
-
     stream_url = request.args.get('stream_url')
     if not stream_url:
         return "Error: Missing stream_url parameter", 400
 
     record_dir = 'static/recordings'
     os.makedirs(record_dir, exist_ok=True)
-
+    
     timestamp = int(time.time())
     wav_path = os.path.join(record_dir, f"verify_{timestamp}.wav")
 
@@ -403,31 +401,48 @@ def recognize_live_stream():
         conf = 0
         song_name = "No Match"
 
+
         if matches:
             top_match = matches[0]
             hashes = top_match.get('hashes_matched_in_input', 0)
             conf = top_match.get('input_confidence', 0)
-            if hashes >= 20 and conf >= 4:   # relaxed thresholds
+            
+            if hashes >= 20 and conf >= 4:
                 is_exact_match = True
                 song_name = top_match.get('song_name', 'Unknown')
 
         status_msg = f"MATCH FOUND: {song_name}" if is_exact_match else "MATCH REJECTED / NOT FOUND"
 
+        # 5. Return HTML Verification Page
         return f"""
         <html>
-            <body>
-                <h2>Live Stream Recognition</h2>
-                <p style="color: {'green' if is_exact_match else 'red'};">{status_msg}</p>
-                <p>Hashes: {hashes} | Confidence: {conf}</p>
-                <audio controls src="/static/recordings/{os.path.basename(wav_path)}"></audio>
-                <pre>{json.dumps(clean_results, indent=2)}</pre>
+            <body style="font-family: sans-serif; padding: 20px; line-height: 1.6;">
+                <h2>Live Stream Recognition Dashboard</h2>
+                <div style="background: #fdfdfd; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <h3 style="color: {'#28a745' if is_exact_match else '#dc3545'};">{status_msg}</h3>
+                    <p><strong>Metrics:</strong> {hashes} Hashes (Target: 50) | {conf} Confidence (Target: 8)</p>
+                    
+                    <h4>Verification Player:</h4>
+                    <p style="font-size: 0.9em; color: #666;">Listen to exactly what the system heard:</p>
+                    <audio controls src="/static/recordings/{wav_filename}" style="width: 100%;"></audio>
+                    
+                    <div style="margin-top: 30px;">
+                        <a href="/api/delete_recording?file={wav_filename}" 
+                           style="background: #ff4444; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                           DELETE RECORDING
+                        </a>
+                        <a href="{request.full_path}" style="margin-left: 15px; color: #007bff;">Try Again</a>
+                    </div>
+                </div>
+                <hr style="margin-top: 40px;">
+                <h4>Raw Engine Output:</h4>
+                <pre style="background: #222; color: #0f0; padding: 15px; overflow: auto; border-radius: 5px;">{json.dumps(clean_results, indent=2)}</pre>
             </body>
         </html>
         """
 
     except Exception as e:
         return f"Recognition failed: {str(e)}", 500
-
         
 # 2. Add a route to manually delete the file
 @app.route('/api/delete_recording')
