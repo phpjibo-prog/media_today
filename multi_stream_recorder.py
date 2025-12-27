@@ -11,7 +11,7 @@ class MultiStreamRecorder:
     def __init__(self,
                  mysql_config,
                  output_folder="recordings", # <-- CHANGED FOLDER NAME HERE
-                 record_seconds=5,
+                 record_seconds=12,
                  wait_seconds=10):
 
         self.mysql_config = mysql_config
@@ -147,16 +147,19 @@ class MultiStreamRecorder:
         path = os.path.join(self.output_folder, filename)
 
         print(f"[Recorder] Recording {url} → {filename}")
-
+        
         cmd = [
             "ffmpeg",
             "-y",
             "-i", url,
             "-t", str(self.record_seconds),
             "-vn",
-            "-acodec", "libmp3lame",
+            "-ac", "1",
+            "-ar", "44100",
+            "-f", "wav",
             path
         ]
+
 
         try:
             subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
