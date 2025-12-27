@@ -1,6 +1,7 @@
 # app.py content (FIXED AND DEBUGGED)
 from flask import Flask, render_template, session, redirect, url_for, request, flash, jsonify
 import os 
+import tempfile
 import mysql.connector
 from mysql.connector import Error
 from werkzeug.utils import secure_filename
