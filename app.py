@@ -250,6 +250,21 @@ def json_serializable(data):
     else:
         return data
 
+def record_radio(stream_url, output_wav, duration=12):
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-loglevel", "error",
+        "-i", stream_url,
+        "-t", str(duration),
+        "-ac", "1",
+        "-ar", "44100",
+        "-vn",
+        "-f", "wav",
+        output_wav
+    ]
+    subprocess.run(cmd, check=True)
+
 # Add this function to track online status (runs before every request)
 @app.before_request
 def update_last_seen():
